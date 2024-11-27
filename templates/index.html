@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natural Python</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐍 Natural Python</h1>
+            <p>Write Python code in plain English!</p>
+        </header>
+
+        <div class="main-content">
+            <div class="editor-section">
+                <h2>✏️ Write Your Code Here</h2>
+                <div class="examples">
+                    <p>Try these commands:</p>
+                    <ul>
+                        <li>Make a number called score equal to 10</li>
+                        <li>Add 5 to score</li>
+                        <li>Print score</li>
+                        <li>If score is bigger than 10, Print "High score!"</li>
+                    </ul>
+                </div>
+                <textarea id="code-editor" placeholder="Type your code here...">
+# Try this example:
+Make a number called age equal to 15
+If age is bigger than 12, Print "You're a teenager!"
+Add 1 to age
+Print age</textarea>
+                <div class="button-group">
+                    <button id="run-button" onclick="runCode()">🚀 Run Code</button>
+                    <button id="clear-button" onclick="clearCode()">🧹 Clear</button>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <h2>👀 Results</h2>
+                <div id="output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
