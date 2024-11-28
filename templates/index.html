@@ -3,95 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python Natural Language IDE</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Natural Python IDE</title>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+<body class="bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-gray-100">
     <div class="flex flex-col h-screen">
-        <!-- Top Bar -->
-        <div class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 shadow-md">
+        <!-- Top Navigation Bar -->
+        <nav class="flex items-center px-4 py-2 bg-white dark:bg-[#1e1e1e] border-b border-gray-200 dark:border-gray-800">
             <div class="flex items-center space-x-2">
-                <button id="toggleSidebar" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <i data-lucide="menu"></i>
+                <button class="hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
                 </button>
-                <div class="flex items-center space-x-1 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <i data-lucide="file"></i>
-                    <span>File</span>
-                    <i data-lucide="chevron-down"></i>
-                </div>
+                <span class="text-sm">File</span>
             </div>
             
-            <div class="flex items-center space-x-2">
-                <button id="runCode" class="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all duration-200 transform hover:scale-105 flex items-center">
-                    <i data-lucide="play" class="mr-1"></i>
-                    Run
+            <div class="flex-1 flex justify-center">
+                <button id="runCode" class="bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-full flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    </svg>
+                    <span>Run</span>
                 </button>
-                <div class="flex items-center space-x-1 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <span class="python-icon">🐍</span>
-                    <span>Python</span>
-                    <i data-lucide="chevron-down"></i>
+                <div class="ml-4 flex items-center space-x-2">
+                    <img src="{{ url_for('static', filename='img/python-logo.png') }}" class="w-5 h-5" alt="Python">
+                    <span class="text-sm">Python</span>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2">
-                <button id="toggleTheme" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <i data-lucide="sun" class="hidden dark:block"></i>
-                    <i data-lucide="moon" class="block dark:hidden"></i>
-                </button>
-                <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <i data-lucide="user"></i>
-                </button>
-                <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <i data-lucide="help-circle"></i>
+                <button id="themeToggle" class="hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
                 </button>
             </div>
-        </div>
+        </nav>
 
         <!-- Main Content -->
         <div class="flex flex-1 overflow-hidden">
-            <!-- Left Sidebar -->
-            <div id="explorer" class="w-64 bg-white dark:bg-gray-800 p-4 overflow-y-auto relative">
-                <h2 class="text-xl font-bold mb-4">Explorer</h2>
-                <div class="space-y-2">
-                    <div class="flex items-center space-x-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded">
-                        <i data-lucide="folder" class="text-yellow-500"></i>
-                        <span>Project</span>
-                    </div>
-                    <div class="flex items-center space-x-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded ml-4">
-                        <i data-lucide="file-text" class="text-blue-500"></i>
-                        <span>main.py</span>
+            <!-- File Explorer -->
+            <div id="explorer" class="w-48 border-r border-gray-200 dark:border-gray-800 bg-[#f8f9fa] dark:bg-[#252526]">
+                <div class="p-3">
+                    <h2 class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Explorer</h2>
+                    <div class="mt-2">
+                        <div class="flex items-center space-x-2 text-sm py-1">
+                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                            </svg>
+                            <span>Project</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm py-1 pl-4 bg-blue-100 dark:bg-blue-900 rounded">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span>main.py</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Code Editor -->
             <div class="flex-1 relative">
-                <div class="absolute left-0 top-0 bottom-0 w-10 bg-gray-200 dark:bg-gray-800 flex flex-col items-center pt-4 text-gray-500" id="lineNumbers">
-                </div>
-                <textarea id="codeEditor" class="w-full h-full p-4 pl-12 font-mono text-lg bg-white dark:bg-gray-900 focus:outline-none"></textarea>
+                <div id="lineNumbers" class="absolute left-0 top-0 bottom-0 w-12 bg-[#f8f9fa] dark:bg-[#1e1e1e] text-gray-400 text-right pr-2 pt-4 select-none border-r border-gray-200 dark:border-gray-800"></div>
+                <textarea id="codeEditor" class="w-full h-full pl-14 pr-4 pt-4 font-mono text-sm bg-white dark:bg-[#1e1e1e] focus:outline-none resize-none" spellcheck="false"></textarea>
             </div>
 
             <!-- Output Panel -->
-            <div id="output" class="w-64 bg-white dark:bg-gray-800 p-4 overflow-y-auto">
-                <h2 class="text-xl font-bold mb-4">Output</h2>
-                <pre id="outputText" class="whitespace-pre-wrap text-green-600 dark:text-green-400"></pre>
+            <div id="output" class="w-64 border-l border-gray-200 dark:border-gray-800 bg-[#f8f9fa] dark:bg-[#252526]">
+                <div class="p-3">
+                    <h2 class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Output</h2>
+                    <pre id="outputText" class="mt-2 text-sm font-mono whitespace-pre-wrap"></pre>
+                </div>
             </div>
         </div>
 
-        <!-- Bottom Bar -->
-        <div class="bg-white dark:bg-gray-800 p-2 flex justify-between items-center">
-            <div class="flex space-x-2">
-                <button id="toggleOutput" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <i data-lucide="chevron-right"></i>
-                </button>
+        <!-- Status Bar -->
+        <div class="flex items-center justify-between px-4 py-1 bg-[#007acc] dark:bg-[#007acc] text-white text-sm">
+            <div class="flex items-center space-x-2">
+                <span>Python</span>
             </div>
             <div class="flex items-center space-x-2">
-                <div class="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div id="progressBar" class="h-full bg-green-500 transition-all duration-300 ease-in-out" style="width: 0%"></div>
+                <div class="w-32 bg-white/20 rounded-full h-1.5">
+                    <div id="progressBar" class="bg-white h-full rounded-full" style="width: 0%"></div>
                 </div>
-                <span id="progressText" class="text-sm">0% Complete</span>
+                <span id="progressText">0% Complete</span>
             </div>
         </div>
     </div>
