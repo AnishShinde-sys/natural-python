@@ -13,6 +13,7 @@ RUN apt-get update && \
         libpq-dev && \
     pip install --upgrade pip && \
     pip install wheel && \
+    pip install numpy==1.23.5 && \
     pip install --no-cache-dir -r requirements.txt && \
     python -m spacy download en_core_web_sm && \
     apt-get purge -y build-essential python3-dev && \
@@ -30,9 +31,6 @@ ENV PYTHONUNBUFFERED=1
 
 # Expose port
 EXPOSE 5000
-
-# Install gunicorn
-RUN pip install gunicorn
 
 # Run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers", "4"]
