@@ -1,17 +1,47 @@
 from flask import Flask, render_template, request, jsonify
 import re
-import spacy
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
 from typing import Dict, List, Any
 from datetime import datetime
 import json
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+import logging
 
-# Load spaCy model
-nlp = spacy.load("en_core_web_sm")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize NLP components lazily
+nlp = None
+lemmatizer = None
+
+def init_nlp():
+    """Initialize NLP components if not already initialized"""
+    global nlp, lemmatizer
+    try:
+        if nlp is None:
+            import spacy
+            logger.info("Loading spaCy model...")
+            nlp = spacy.load("en_core_web_sm")
+            logger.info("spaCy model loaded successfully")
+            
+        if lemmatizer is None:
+            import nltk
+            from nltk.stem import WordNetLemmatizer
+            try:
+                nltk.data.find('tokenizers/punkt')
+            except LookupError:
+                nltk.download('punkt')
+            try:
+                nltk.data.find('corpora/wordnet')
+            except LookupError:
+                nltk.download('wordnet')
+            lemmatizer = WordNetLemmatizer()
+            logger.info("NLTK components initialized successfully")
+            
+    except Exception as e:
+        logger.error(f"Error initializing NLP components: {str(e)}")
+        raise
 
 @dataclass
 class Variable:
@@ -29,35 +59,43 @@ class NaturalPythonInterpreter(CodeInterpreter):
     def __init__(self):
         self.variables: Dict[str, Variable] = {}
         self.output: List[str] = []
-        self.lemmatizer = WordNetLemmatizer()
         
     def preprocess_text(self, text: str) -> str:
         """Apply NLP preprocessing to the input text"""
-        # Tokenization and lemmatization
-        tokens = word_tokenize(text.lower())
-        lemmatized = [self.lemmatizer.lemmatize(token) for token in tokens]
-        
-        # Use spaCy for advanced NLP
-        doc = nlp(text)
-        
-        # Extract important entities
-        entities = [(ent.text, ent.label_) for ent in doc.ents]
-        
-        # Return processed text
-        return " ".join(lemmatized)
+        try:
+            init_nlp()  # Initialize NLP components if needed
+            from nltk.tokenize import word_tokenize
+            
+            # Tokenization and lemmatization
+            tokens = word_tokenize(text.lower())
+            lemmatized = [lemmatizer.lemmatize(token) for token in tokens]
+            
+            # Use spaCy for advanced NLP
+            doc = nlp(text)
+            
+            # Extract important entities
+            entities = [(ent.text, ent.label_) for ent in doc.ents]
+            
+            # Return processed text
+            return " ".join(lemmatized)
+        except Exception as e:
+            logger.error(f"Error in text preprocessing: {str(e)}")
+            return text  # Return original text if processing fails
 
     def process_code(self, natural_code: str) -> str:
-        self.output = []
-        
-        # Process the code using NLP
-        processed_code = self.preprocess_text(natural_code)
-        
-        # Process each line
-        for line in natural_code.split('\n'):
-            if line.strip() and not line.strip().startswith('#'):
-                self.process_line(line.strip())
-                
-        return '\n'.join(self.output)
+        try:
+            self.output = []
+            
+            # Process each line
+            for line in natural_code.split('\n'):
+                if line.strip() and not line.strip().startswith('#'):
+                    self.process_line(line.strip())
+                    
+            return '\n'.join(self.output)
+        except Exception as e:
+            error_msg = f"Error processing code: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
 
     def process_line(self, line: str) -> None:
         try:
@@ -165,30 +203,40 @@ class NaturalPythonInterpreter(CodeInterpreter):
             condition = condition.replace(phrase, operator)
         return condition
 
-# Flask app setup with security
-from flask_talisman import Talisman
-
+# Flask app setup
 app = Flask(__name__)
-Talisman(app, force_https=True)
 interpreter = NaturalPythonInterpreter()
 
-@app.after_request
-def add_security_headers(response):
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    return response
+@app.before_first_request
+def before_first_request():
+    """Initialize NLP components before first request"""
+    try:
+        init_nlp()
+    except Exception as e:
+        logger.error(f"Failed to initialize NLP components: {str(e)}")
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error rendering template: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/run_code', methods=['POST'])
 def run_code():
-    code = request.json.get('code', '')
-    output = interpreter.process_code(code)
-    return jsonify({'output': output})
+    try:
+        code = request.json.get('code', '')
+        output = interpreter.process_code(code)
+        return jsonify({'output': output})
+    except Exception as e:
+        logger.error(f"Error running code: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.errorhandler(500)
+def handle_500(error):
+    logger.error(f"Internal Server Error: {str(error)}")
+    return jsonify({'error': 'Internal Server Error'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
