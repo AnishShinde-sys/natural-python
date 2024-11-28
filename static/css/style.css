@@ -169,3 +169,50 @@ button:hover {
     font-size: 12px;
     padding: 5px;
 }
+
+/* Custom styles */
+.python-icon {
+    font-size: 1.2em;
+}
+
+#codeEditor {
+    resize: none;
+    tab-size: 4;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.line-numbers {
+    user-select: none;
+}
+
+/* Dark mode transitions */
+.dark-transition {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Resizer styles */
+.resizer {
+    position: absolute;
+    background: rgba(128, 128, 128, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.resizer:hover {
+    opacity: 1;
+}
+
+.resizer-v {
+    cursor: col-resize;
+    width: 4px;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.resizer-h {
+    cursor: row-resize;
+    height: 4px;
+    left: 0;
+    right: 0;
+}

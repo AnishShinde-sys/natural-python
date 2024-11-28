@@ -3,63 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyTalk IDE</title>
+    <title>Python Natural Language IDE</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
-    <div class="ide-container">
-        <!-- Left Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h3>EXPLORER</h3>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div class="flex flex-col h-screen">
+        <!-- Top Bar -->
+        <div class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 shadow-md">
+            <div class="flex items-center space-x-2">
+                <button id="toggleSidebar" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="flex items-center space-x-1 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i data-lucide="file"></i>
+                    <span>File</span>
+                    <i data-lucide="chevron-down"></i>
+                </div>
             </div>
-            <div class="file-tree">
-                <div class="file active">📄 main.py</div>
-                <div class="file">📄 examples.py</div>
+            
+            <div class="flex items-center space-x-2">
+                <button id="runCode" class="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all duration-200 transform hover:scale-105 flex items-center">
+                    <i data-lucide="play" class="mr-1"></i>
+                    Run
+                </button>
+                <div class="flex items-center space-x-1 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <span class="python-icon">🐍</span>
+                    <span>Python</span>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button id="toggleTheme" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i data-lucide="sun" class="hidden dark:block"></i>
+                    <i data-lucide="moon" class="block dark:hidden"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i data-lucide="user"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i data-lucide="help-circle"></i>
+                </button>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="main-content">
-            <!-- Top Bar -->
-            <div class="top-bar">
-                <div class="tabs">
-                    <div class="tab active">main.py</div>
-                </div>
-                <div class="actions">
-                    <button class="run-btn" onclick="runCode()">▶ Run</button>
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Left Sidebar -->
+            <div id="explorer" class="w-64 bg-white dark:bg-gray-800 p-4 overflow-y-auto relative">
+                <h2 class="text-xl font-bold mb-4">Explorer</h2>
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded">
+                        <i data-lucide="folder" class="text-yellow-500"></i>
+                        <span>Project</span>
+                    </div>
+                    <div class="flex items-center space-x-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded ml-4">
+                        <i data-lucide="file-text" class="text-blue-500"></i>
+                        <span>main.py</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Editor Area -->
-            <div class="editor-container">
-                <div class="editor-wrapper">
-                    <textarea id="code-editor">
-# Try these examples:
-Make a number called score equal to 10
-Add 5 to score
-Print score
+            <!-- Code Editor -->
+            <div class="flex-1 relative">
+                <div class="absolute left-0 top-0 bottom-0 w-10 bg-gray-200 dark:bg-gray-800 flex flex-col items-center pt-4 text-gray-500" id="lineNumbers">
+                </div>
+                <textarea id="codeEditor" class="w-full h-full p-4 pl-12 font-mono text-lg bg-white dark:bg-gray-900 focus:outline-none"></textarea>
+            </div>
 
-If score is bigger than 15:
-    Print "High score!"</textarea>
+            <!-- Output Panel -->
+            <div id="output" class="w-64 bg-white dark:bg-gray-800 p-4 overflow-y-auto">
+                <h2 class="text-xl font-bold mb-4">Output</h2>
+                <pre id="outputText" class="whitespace-pre-wrap text-green-600 dark:text-green-400"></pre>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="bg-white dark:bg-gray-800 p-2 flex justify-between items-center">
+            <div class="flex space-x-2">
+                <button id="toggleOutput" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full bg-green-500 transition-all duration-300 ease-in-out" style="width: 0%"></div>
                 </div>
-                
-                <!-- Output Panel -->
-                <div class="output-panel">
-                    <div class="panel-header">
-                        <span>Output</span>
-                        <button class="clear-btn" onclick="clearOutput()">Clear</button>
-                    </div>
-                    <div id="output" class="output-content"></div>
-                </div>
+                <span id="progressText" class="text-sm">0% Complete</span>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

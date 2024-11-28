@@ -1,81 +1,97 @@
-let editor;
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Lucide icons
+    lucide.createIcons();
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize CodeMirror
-    editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
-        mode: 'python',
-        theme: 'monokai',
-        lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        indentUnit: 4,
-        tabSize: 4,
-        lineWrapping: true,
-        extraKeys: {
-            "Tab": function(cm) {
-                cm.replaceSelection("    ", "end");
-            }
-        }
+    // Elements
+    const codeEditor = document.getElementById('codeEditor');
+    const outputText = document.getElementById('outputText');
+    const runButton = document.getElementById('runCode');
+    const toggleTheme = document.getElementById('toggleTheme');
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    const toggleOutput = document.getElementById('toggleOutput');
+    const explorer = document.getElementById('explorer');
+    const output = document.getElementById('output');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const lineNumbers = document.getElementById('lineNumbers');
+
+    // Theme handling
+    let isDarkMode = localStorage.getItem('darkMode') === 'true';
+    updateTheme();
+
+    toggleTheme.addEventListener('click', () => {
+        isDarkMode = !isDarkMode;
+        localStorage.setItem('darkMode', isDarkMode);
+        updateTheme();
     });
 
-    // Set initial content
-    editor.setValue(`# Welcome to PyTalk IDE
-# Try these examples:
-
-Make a number called score equal to 10
-Add 5 to score
-Print score
-
-If score is bigger than 10:
-    Print "High score!"`);
-
-    // Add event listeners for file tree
-    document.querySelectorAll('.file').forEach(file => {
-        file.addEventListener('click', () => {
-            document.querySelectorAll('.file').forEach(f => f.classList.remove('active'));
-            file.classList.add('active');
-        });
-    });
-});
-
-function runCode() {
-    const code = editor.getValue();
-    const outputDiv = document.getElementById('output');
-    
-    // Add loading indicator
-    outputDiv.innerHTML = '<div class="loading">Running code...</div>';
-    
-    fetch('/run_code', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: code })
-    })
-    .then(response => response.json())
-    .then(data => {
-        outputDiv.innerHTML = `<pre class="output-text">${data.output}</pre>`;
-    })
-    .catch(error => {
-        outputDiv.innerHTML = `<pre class="error-text">Error: ${error}</pre>`;
-    });
-}
-
-function clearOutput() {
-    document.getElementById('output').innerHTML = '';
-}
-
-function insertExample(code) {
-    editor.replaceSelection(code + '\n');
-    editor.focus();
-}
-
-// Add keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            runCode();
-        }
+    function updateTheme() {
+        document.documentElement.classList.toggle('dark', isDarkMode);
     }
+
+    // Line numbers
+    function updateLineNumbers() {
+        const lines = codeEditor.value.split('\n');
+        lineNumbers.innerHTML = lines.map((_, i) => 
+            `<div class="line-number">${i + 1}</div>`
+        ).join('');
+    }
+
+    codeEditor.addEventListener('input', updateLineNumbers);
+    updateLineNumbers();
+
+    // Code execution
+    runButton.addEventListener('click', async function() {
+        runButton.disabled = true;
+        progressBar.style.width = '0%';
+        
+        try {
+            const response = await fetch('/run_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: codeEditor.value })
+            });
+            
+            const data = await response.json();
+            outputText.textContent = data.output;
+            
+            // Simulate progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${progress}% Complete`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                }
+            }, 50);
+        } catch (error) {
+            outputText.textContent = `Error: ${error.message}`;
+        } finally {
+            runButton.disabled = false;
+        }
+    });
+
+    // Sidebar toggles
+    toggleSidebar.addEventListener('click', () => {
+        explorer.classList.toggle('hidden');
+    });
+
+    toggleOutput.addEventListener('click', () => {
+        output.classList.toggle('hidden');
+    });
+
+    // Example starter code
+    codeEditor.value = `# Welcome to the Python Natural Language IDE!
+# Try writing some commands like:
+
+Make a number called x equal to 10
+Print x
+Add 5 to x
+If x is bigger than 12, Print x`;
+
+    updateLineNumbers();
 });
