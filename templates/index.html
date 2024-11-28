@@ -4,103 +4,153 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Natural Python IDE</title>
-    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body class="bg-[#1e1e1e] text-gray-100">
-    <div class="flex flex-col h-screen">
-        <!-- Top Navigation -->
-        <nav class="flex items-center h-12 bg-[#2d2d2d] border-b border-[#404040] px-4">
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center space-x-2">
-                    <button class="hover:bg-[#3d3d3d] p-1.5 rounded">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                    <span class="text-sm text-gray-300">File</span>
-                </div>
-            </div>
+<body>
+    <div id="root"></div>
 
-            <div class="flex-1 flex justify-center items-center space-x-4">
-                <button id="runCode" class="bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-sm flex items-center space-x-2 text-sm font-medium">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                    </svg>
-                    <span>Run</span>
-                </button>
-                <div class="flex items-center space-x-2 text-sm text-gray-300">
-                    <span class="text-[#3572A5]">●</span>
-                    <span>Python</span>
-                </div>
-            </div>
+    <script type="text/babel">
+        function App() {
+            const [code, setCode] = React.useState('');
+            const [output, setOutput] = React.useState('');
+            const [isRunning, setIsRunning] = React.useState(false);
+            const [progress, setProgress] = React.useState(0);
+            const [isDark, setIsDark] = React.useState(true);
 
-            <div class="flex items-center space-x-2">
-                <button id="themeToggle" class="hover:bg-[#3d3d3d] p-1.5 rounded">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                    </svg>
-                </button>
-            </div>
-        </nav>
+            const runCode = async () => {
+                setIsRunning(true);
+                setProgress(0);
+                
+                try {
+                    const response = await fetch('/run_code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    const data = await response.json();
+                    setOutput(data.output);
+                    
+                    // Simulate progress
+                    let currentProgress = 0;
+                    const interval = setInterval(() => {
+                        currentProgress += 5;
+                        setProgress(currentProgress);
+                        
+                        if (currentProgress >= 100) {
+                            clearInterval(interval);
+                        }
+                    }, 50);
+                } catch (error) {
+                    setOutput(`Error: ${error.message}`);
+                } finally {
+                    setIsRunning(false);
+                }
+            };
 
-        <!-- Main Content -->
-        <div class="flex flex-1 overflow-hidden">
-            <!-- Left Sidebar -->
-            <div class="w-64 bg-[#252526] border-r border-[#404040]">
-                <div class="p-3">
-                    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Explorer</h2>
-                    <div class="space-y-1">
-                        <div class="flex items-center space-x-2 text-sm py-1 px-2 hover:bg-[#2d2d2d] rounded">
-                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                            </svg>
-                            <span>Project</span>
+            return (
+                <div className="flex flex-col h-screen bg-[#1e1e1e] text-gray-100">
+                    {/* Top Navigation */}
+                    <nav className="flex items-center h-12 bg-[#2d2d2d] border-b border-[#404040] px-4">
+                        <div className="flex items-center space-x-4">
+                            <button className="hover:bg-[#3d3d3d] p-1.5 rounded">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+                            <span className="text-sm text-gray-300">File</span>
                         </div>
-                        <div class="flex items-center space-x-2 text-sm py-1 px-2 ml-4 bg-[#37373d] rounded">
-                            <svg class="w-4 h-4 text-[#3572A5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <span>main.py</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Editor Area -->
-            <div class="flex-1 flex flex-col">
-                <!-- Code Input -->
-                <div class="flex-1 relative">
-                    <div class="absolute left-0 top-0 bottom-0 w-12 bg-[#1e1e1e] text-gray-500 text-xs text-right pr-2 pt-4 select-none border-r border-[#404040]" id="lineNumbers"></div>
-                    <textarea id="codeEditor" spellcheck="false" class="w-full h-full pl-14 pr-4 pt-4 bg-[#1e1e1e] text-gray-100 font-mono text-sm focus:outline-none resize-none" placeholder="Type your Python code here..."></textarea>
-                </div>
-
-                <!-- Output Panel -->
-                <div class="h-48 border-t border-[#404040] bg-[#1e1e1e]">
-                    <div class="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#404040]">
-                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Output</span>
-                        <div class="flex items-center space-x-2">
-                            <div class="w-32 bg-[#404040] rounded-full h-1">
-                                <div id="progressBar" class="bg-[#28a745] h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                        <div className="flex-1 flex justify-center items-center space-x-4">
+                            <button
+                                onClick={runCode}
+                                disabled={isRunning}
+                                className={`bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-sm flex items-center space-x-2 text-sm font-medium ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {isRunning ? (
+                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    </svg>
+                                )}
+                                <span>Run</span>
+                            </button>
+                            <div className="flex items-center space-x-2 text-sm text-gray-300">
+                                <span className="text-[#3572A5]">●</span>
+                                <span>Python</span>
                             </div>
-                            <span id="progressText" class="text-xs text-gray-400">0% Complete</span>
+                        </div>
+
+                        <button
+                            onClick={() => setIsDark(!isDark)}
+                            className="hover:bg-[#3d3d3d] p-1.5 rounded"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </nav>
+
+                    {/* Main Content */}
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* Editor Area */}
+                        <div className="flex-1 flex flex-col">
+                            {/* Code Input */}
+                            <div className="flex-1 relative">
+                                <textarea
+                                    value={code}
+                                    onChange={(e) => setCode(e.target.value)}
+                                    spellCheck="false"
+                                    className="w-full h-full p-4 bg-[#1e1e1e] text-gray-100 font-mono text-sm focus:outline-none resize-none"
+                                    placeholder="Type your Python code here..."
+                                />
+                            </div>
+
+                            {/* Output Panel */}
+                            <div className="h-48 border-t border-[#404040] bg-[#1e1e1e]">
+                                <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#404040]">
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Output</span>
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-32 bg-[#404040] rounded-full h-1">
+                                            <div
+                                                className="bg-[#28a745] h-full rounded-full transition-all duration-300"
+                                                style={{ width: `${progress}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-xs text-gray-400">{progress}% Complete</span>
+                                    </div>
+                                </div>
+                                <pre className="p-4 text-sm font-mono text-gray-300 h-[calc(100%-2.5rem)] overflow-auto">
+                                    {output}
+                                </pre>
+                            </div>
                         </div>
                     </div>
-                    <pre id="outputText" class="p-4 text-sm font-mono text-gray-300 h-[calc(100%-2.5rem)] overflow-auto"></pre>
+
+                    {/* Status Bar */}
+                    <div className="h-6 bg-[#007acc] text-white text-xs flex items-center px-4">
+                        <div className="flex items-center space-x-2">
+                            <span>Python</span>
+                            <span className="text-white/50">|</span>
+                            <span>Natural Language Mode</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
+            );
+        }
 
-        <!-- Status Bar -->
-        <div class="h-6 bg-[#007acc] text-white text-xs flex items-center px-4">
-            <div class="flex items-center space-x-2">
-                <span>Python</span>
-                <span class="text-white/50">|</span>
-                <span>Natural Language Mode</span>
-            </div>
-        </div>
-    </div>
-
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
