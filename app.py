@@ -10,11 +10,6 @@ import json
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
-# Download required NLTK data
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
-
 # Load spaCy model
 nlp = spacy.load("en_core_web_sm")
 
