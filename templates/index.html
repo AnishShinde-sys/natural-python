@@ -3,49 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Natural Python</title>
+    <title>PyTalk IDE</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🐍 Natural Python</h1>
-            <p>Write Python code in plain English!</p>
-        </header>
+    <div class="ide-container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>EXPLORER</h3>
+            </div>
+            <div class="file-tree">
+                <div class="file active">📄 main.py</div>
+                <div class="file">📄 examples.py</div>
+            </div>
+        </div>
 
+        <!-- Main Content -->
         <div class="main-content">
-            <div class="editor-section">
-                <h2>✏️ Write Your Code Here</h2>
-                <div class="examples">
-                    <p>Try these commands:</p>
-                    <ul>
-                        <li>Make a number called score equal to 10</li>
-                        <li>Add 5 to score</li>
-                        <li>Print score</li>
-                        <li>If score is bigger than 10, Print "High score!"</li>
-                    </ul>
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="tabs">
+                    <div class="tab active">main.py</div>
                 </div>
-                <textarea id="code-editor" placeholder="Type your code here...">
-# Try this example:
-Make a number called age equal to 15
-If age is bigger than 12, Print "You're a teenager!"
-Add 1 to age
-Print age</textarea>
-                <div class="button-group">
-                    <button id="run-button" onclick="runCode()">🚀 Run Code</button>
-                    <button id="clear-button" onclick="clearCode()">🧹 Clear</button>
+                <div class="actions">
+                    <button class="run-btn" onclick="runCode()">▶ Run</button>
                 </div>
             </div>
 
-            <div class="output-section">
-                <h2>👀 Results</h2>
-                <div id="output"></div>
+            <!-- Editor Area -->
+            <div class="editor-container">
+                <div class="editor-wrapper">
+                    <textarea id="code-editor">
+# Try these examples:
+Make a number called score equal to 10
+Add 5 to score
+Print score
+
+If score is bigger than 15:
+    Print "High score!"</textarea>
+                </div>
+                
+                <!-- Output Panel -->
+                <div class="output-panel">
+                    <div class="panel-header">
+                        <span>Output</span>
+                        <button class="clear-btn" onclick="clearOutput()">Clear</button>
+                    </div>
+                    <div id="output" class="output-content"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
