@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -15,6 +16,27 @@ logger = logging.getLogger(__name__)
 nlp = None
 lemmatizer = None
 
+def download_nltk_data():
+    """Download NLTK data to a specified directory"""
+    import nltk
+    
+    # Set NLTK data path to a writable directory
+    nltk_data_dir = os.path.join(os.getcwd(), 'nltk_data')
+    os.environ['NLTK_DATA'] = nltk_data_dir
+    os.makedirs(nltk_data_dir, exist_ok=True)
+    
+    try:
+        # Download required NLTK data
+        for package in ['punkt', 'wordnet']:
+            try:
+                nltk.download(package, download_dir=nltk_data_dir, quiet=True)
+            except Exception as e:
+                logger.error(f"Error downloading {package}: {str(e)}")
+                raise
+    except Exception as e:
+        logger.error(f"Failed to download NLTK data: {str(e)}")
+        raise
+
 def init_nlp():
     """Initialize NLP components if not already initialized"""
     global nlp, lemmatizer
@@ -22,20 +44,20 @@ def init_nlp():
         if nlp is None:
             import spacy
             logger.info("Loading spaCy model...")
-            nlp = spacy.load("en_core_web_sm")
-            logger.info("spaCy model loaded successfully")
+            try:
+                nlp = spacy.load("en_core_web_sm")
+                logger.info("spaCy model loaded successfully")
+            except Exception as e:
+                logger.error(f"Error loading spaCy model: {str(e)}")
+                raise
             
         if lemmatizer is None:
             import nltk
             from nltk.stem import WordNetLemmatizer
-            try:
-                nltk.data.find('tokenizers/punkt')
-            except LookupError:
-                nltk.download('punkt')
-            try:
-                nltk.data.find('corpora/wordnet')
-            except LookupError:
-                nltk.download('wordnet')
+            
+            # Download NLTK data if needed
+            download_nltk_data()
+            
             lemmatizer = WordNetLemmatizer()
             logger.info("NLTK components initialized successfully")
             
@@ -203,7 +225,7 @@ class NaturalPythonInterpreter(CodeInterpreter):
             condition = condition.replace(phrase, operator)
         return condition
 
-# Flask app setup
+# Flask app setup with better error handling
 app = Flask(__name__)
 interpreter = NaturalPythonInterpreter()
 
@@ -214,6 +236,8 @@ def before_first_request():
         init_nlp()
     except Exception as e:
         logger.error(f"Failed to initialize NLP components: {str(e)}")
+        # Continue even if initialization fails
+        pass
 
 @app.route('/')
 def home():
@@ -227,16 +251,39 @@ def home():
 def run_code():
     try:
         code = request.json.get('code', '')
+        if not code.strip():
+            return jsonify({'output': 'No code to run'})
+            
         output = interpreter.process_code(code)
         return jsonify({'output': output})
     except Exception as e:
         logger.error(f"Error running code: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f"Error running code: {str(e)}"}), 500
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'nlp_initialized': nlp is not None,
+        'lemmatizer_initialized': lemmatizer is not None
+    })
 
 @app.errorhandler(500)
 def handle_500(error):
     logger.error(f"Internal Server Error: {str(error)}")
     return jsonify({'error': 'Internal Server Error'}), 500
 
+@app.errorhandler(Exception)
+def handle_exception(error):
+    logger.error(f"Unhandled Exception: {str(error)}")
+    return jsonify({'error': 'An unexpected error occurred'}), 500
+
 if __name__ == '__main__':
+    # Initialize NLP components at startup in development
+    try:
+        init_nlp()
+    except Exception as e:
+        logger.error(f"Failed to initialize NLP components at startup: {str(e)}")
+    
     app.run(debug=True)
