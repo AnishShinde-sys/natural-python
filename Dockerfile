@@ -2,8 +2,8 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Copy requirements and download script first
-COPY requirements.txt download_models.py ./
+# Copy requirements first for better caching
+COPY requirements.txt .
 
 # Install build dependencies and requirements
 RUN apt-get update && \
@@ -17,8 +17,7 @@ RUN apt-get update && \
     pip install numpy==1.23.5 && \
     # Then install other requirements
     pip install --no-cache-dir -r requirements.txt && \
-    # Download models during build
-    python download_models.py && \
+    python -m spacy download en_core_web_sm && \
     # Cleanup
     apt-get purge -y build-essential python3-dev && \
     apt-get autoremove -y && \
@@ -32,11 +31,9 @@ COPY . .
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
-ENV GUNICORN_TIMEOUT=120
-ENV GUNICORN_WORKERS=2
 
-# Create gunicorn config
-COPY gunicorn.conf.py .
+# Expose port
+EXPOSE 10000
 
 # Run the application
-CMD gunicorn --config gunicorn.conf.py --bind "0.0.0.0:${PORT:-5000}" app:app
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
