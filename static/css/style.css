@@ -2,11 +2,19 @@
     --bg-primary: #1e1e1e;
     --bg-secondary: #252526;
     --bg-tertiary: #2d2d2d;
+    --bg-hover: #2a2d2e;
     --text-primary: #d4d4d4;
     --text-secondary: #858585;
     --accent: #0078d4;
     --border: #404040;
     --success: #28a745;
+    --error: #d16969;
+    --warning: #dcdcaa;
+    
+    --top-nav-height: 48px;
+    --status-bar-height: 22px;
+    --sidebar-width: 240px;
+    --output-height: 200px;
 }
 
 * {
@@ -21,69 +29,140 @@ body {
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .ide-container {
     display: flex;
+    flex-direction: column;
     height: 100vh;
 }
 
-/* Sidebar Styles */
+/* Top Navigation */
+.top-nav {
+    height: var(--top-nav-height);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    justify-content: space-between;
+}
+
+.nav-left, .nav-center, .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.breadcrumb {
+    display: flex;
+    gap: 16px;
+    color: var(--text-secondary);
+}
+
+.breadcrumb span {
+    cursor: pointer;
+}
+
+.breadcrumb span:hover {
+    color: var(--text-primary);
+}
+
+/* Buttons */
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.run-btn {
+    background: var(--success);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.run-btn:hover {
+    opacity: 0.9;
+}
+
+/* Main Content */
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar */
 .sidebar {
-    width: 250px;
+    width: var(--sidebar-width);
     background: var(--bg-secondary);
     border-right: 1px solid var(--border);
+    overflow-y: auto;
 }
 
 .sidebar-header {
-    padding: 10px 20px;
+    padding: 10px 16px;
     font-size: 11px;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
 .file-tree {
-    padding: 10px;
+    padding: 8px;
 }
 
-.file {
-    padding: 5px 10px;
+.folder, .file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
     cursor: pointer;
-    border-radius: 3px;
-    font-size: 13px;
+    color: var(--text-secondary);
 }
 
 .file.active {
-    background: var(--bg-tertiary);
+    background: var(--bg-hover);
+    color: var(--text-primary);
 }
 
-/* Main Content Styles */
-.main-content {
+.folder:hover, .file:hover {
+    background: var(--bg-hover);
+}
+
+/* Editor Area */
+.editor-area {
     flex: 1;
     display: flex;
     flex-direction: column;
-}
-
-.top-bar {
-    height: 35px;
-    background: var(--bg-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 10px;
-    border-bottom: 1px solid var(--border);
+    overflow: hidden;
 }
 
 .editor-container {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.editor-wrapper {
-    flex: 2;
-    border-bottom: 1px solid var(--border);
+    overflow: hidden;
 }
 
 /* CodeMirror Customization */
@@ -93,58 +172,100 @@ body {
     font-size: 14px;
     line-height: 1.6;
     background: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
 }
 
-/* Output Panel Styles */
+/* Output Panel */
 .output-panel {
-    height: 200px;
+    height: var(--output-height);
     background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
 }
 
 .panel-header {
-    padding: 8px 15px;
+    padding: 8px 16px;
     background: var(--bg-tertiary);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.progress-container {
+    width: 100px;
+    height: 4px;
+    background: var(--bg-primary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--success);
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
 .output-content {
-    padding: 10px;
-    height: calc(100% - 35px);
+    padding: 12px 16px;
+    height: calc(100% - 37px);
     overflow: auto;
     font-family: 'Consolas', monospace;
     font-size: 13px;
-    line-height: 1.5;
-    color: var(--text-primary);
+    white-space: pre-wrap;
 }
 
-/* Button Styles */
-.run-btn {
-    background: var(--success);
-    color: white;
-    border: none;
-    border-radius: 3px;
-    padding: 4px 12px;
-    cursor: pointer;
-    font-size: 12px;
+/* Status Bar */
+.status-bar {
+    height: var(--status-bar-height);
+    background: var(--accent);
     display: flex;
     align-items: center;
-    gap: 5px;
-}
-
-.clear-btn {
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-    padding: 2px 8px;
-    border-radius: 3px;
-    cursor: pointer;
+    padding: 0 16px;
+    gap: 16px;
     font-size: 11px;
+    color: white;
 }
 
-button:hover {
-    opacity: 0.9;
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border: 4px solid var(--bg-primary);
+    border-radius: 7px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }
