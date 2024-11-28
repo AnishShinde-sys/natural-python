@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Natural Python IDE</title>
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -17,12 +14,11 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        function App() {
+        const App = () => {
             const [code, setCode] = React.useState('');
             const [output, setOutput] = React.useState('');
             const [isRunning, setIsRunning] = React.useState(false);
             const [progress, setProgress] = React.useState(0);
-            const [isDark, setIsDark] = React.useState(true);
 
             const runCode = async () => {
                 setIsRunning(true);
@@ -40,15 +36,11 @@
                     const data = await response.json();
                     setOutput(data.output);
                     
-                    // Simulate progress
-                    let currentProgress = 0;
+                    let prog = 0;
                     const interval = setInterval(() => {
-                        currentProgress += 5;
-                        setProgress(currentProgress);
-                        
-                        if (currentProgress >= 100) {
-                            clearInterval(interval);
-                        }
+                        prog += 5;
+                        setProgress(prog);
+                        if (prog >= 100) clearInterval(interval);
                     }, 50);
                 } catch (error) {
                     setOutput(`Error: ${error.message}`);
@@ -62,27 +54,25 @@
                     {/* Top Navigation */}
                     <nav className="flex items-center h-12 bg-[#2d2d2d] border-b border-[#404040] px-4">
                         <div className="flex items-center space-x-4">
-                            <button className="hover:bg-[#3d3d3d] p-1.5 rounded">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            </button>
-                            <span className="text-sm text-gray-300">File</span>
+                            <div className="flex items-center space-x-2">
+                                <button className="hover:bg-[#3d3d3d] p-1.5 rounded">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                                    </svg>
+                                </button>
+                                <span className="text-sm text-gray-300">File</span>
+                            </div>
                         </div>
 
                         <div className="flex-1 flex justify-center items-center space-x-4">
                             <button
                                 onClick={runCode}
                                 disabled={isRunning}
-                                className={`bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-sm flex items-center space-x-2 text-sm font-medium ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className="bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-sm flex items-center space-x-2 text-sm font-medium disabled:opacity-50"
                             >
-                                {isRunning ? (
-                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                    </svg>
-                                )}
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                </svg>
                                 <span>Run</span>
                             </button>
                             <div className="flex items-center space-x-2 text-sm text-gray-300">
@@ -90,15 +80,6 @@
                                 <span>Python</span>
                             </div>
                         </div>
-
-                        <button
-                            onClick={() => setIsDark(!isDark)}
-                            className="hover:bg-[#3d3d3d] p-1.5 rounded"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                            </svg>
-                        </button>
                     </nav>
 
                     {/* Main Content */}
@@ -124,7 +105,7 @@
                                         <div className="w-32 bg-[#404040] rounded-full h-1">
                                             <div
                                                 className="bg-[#28a745] h-full rounded-full transition-all duration-300"
-                                                style={{ width: `${progress}%` }}
+                                                style={{width: `${progress}%`}}
                                             />
                                         </div>
                                         <span className="text-xs text-gray-400">{progress}% Complete</span>
@@ -147,10 +128,9 @@
                     </div>
                 </div>
             );
-        }
+        };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
