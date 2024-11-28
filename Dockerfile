@@ -35,11 +35,8 @@ ENV PYTHONUNBUFFERED=1
 ENV GUNICORN_TIMEOUT=120
 ENV GUNICORN_WORKERS=2
 
-# Expose port
-EXPOSE 5000
-
 # Create gunicorn config
-RUN echo "timeout = 120\nworkers = 2\nworker_class = 'sync'\nworker_connections = 1000" > gunicorn.conf.py
+COPY gunicorn.conf.py .
 
 # Run the application
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "--bind", "0.0.0.0:5000", "app:app"]
+CMD gunicorn --config gunicorn.conf.py --bind "0.0.0.0:${PORT:-5000}" app:app
