@@ -7,35 +7,37 @@
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body class="bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-gray-100">
+<body class="bg-[#1e1e1e] text-gray-100">
     <div class="flex flex-col h-screen">
-        <!-- Top Navigation Bar -->
-        <nav class="flex items-center px-4 py-2 bg-white dark:bg-[#1e1e1e] border-b border-gray-200 dark:border-gray-800">
-            <div class="flex items-center space-x-2">
-                <button class="hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                <span class="text-sm">File</span>
+        <!-- Top Navigation -->
+        <nav class="flex items-center h-12 bg-[#2d2d2d] border-b border-[#404040] px-4">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <button class="hover:bg-[#3d3d3d] p-1.5 rounded">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <span class="text-sm text-gray-300">File</span>
+                </div>
             </div>
-            
-            <div class="flex-1 flex justify-center">
-                <button id="runCode" class="bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-full flex items-center space-x-2">
+
+            <div class="flex-1 flex justify-center items-center space-x-4">
+                <button id="runCode" class="bg-[#28a745] hover:bg-[#218838] text-white px-6 py-1.5 rounded-sm flex items-center space-x-2 text-sm font-medium">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
                     </svg>
                     <span>Run</span>
                 </button>
-                <div class="ml-4 flex items-center space-x-2">
-                    <img src="{{ url_for('static', filename='img/python-logo.png') }}" class="w-5 h-5" alt="Python">
-                    <span class="text-sm">Python</span>
+                <div class="flex items-center space-x-2 text-sm text-gray-300">
+                    <span class="text-[#3572A5]">●</span>
+                    <span>Python</span>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2">
-                <button id="themeToggle" class="hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button id="themeToggle" class="hover:bg-[#3d3d3d] p-1.5 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
                 </button>
@@ -44,19 +46,19 @@
 
         <!-- Main Content -->
         <div class="flex flex-1 overflow-hidden">
-            <!-- File Explorer -->
-            <div id="explorer" class="w-48 border-r border-gray-200 dark:border-gray-800 bg-[#f8f9fa] dark:bg-[#252526]">
+            <!-- Left Sidebar -->
+            <div class="w-64 bg-[#252526] border-r border-[#404040]">
                 <div class="p-3">
-                    <h2 class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Explorer</h2>
-                    <div class="mt-2">
-                        <div class="flex items-center space-x-2 text-sm py-1">
+                    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Explorer</h2>
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2 text-sm py-1 px-2 hover:bg-[#2d2d2d] rounded">
                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
                             </svg>
                             <span>Project</span>
                         </div>
-                        <div class="flex items-center space-x-2 text-sm py-1 pl-4 bg-blue-100 dark:bg-blue-900 rounded">
-                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="flex items-center space-x-2 text-sm py-1 px-2 ml-4 bg-[#37373d] rounded">
+                            <svg class="w-4 h-4 text-[#3572A5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             <span>main.py</span>
@@ -65,31 +67,36 @@
                 </div>
             </div>
 
-            <!-- Code Editor -->
-            <div class="flex-1 relative">
-                <div id="lineNumbers" class="absolute left-0 top-0 bottom-0 w-12 bg-[#f8f9fa] dark:bg-[#1e1e1e] text-gray-400 text-right pr-2 pt-4 select-none border-r border-gray-200 dark:border-gray-800"></div>
-                <textarea id="codeEditor" class="w-full h-full pl-14 pr-4 pt-4 font-mono text-sm bg-white dark:bg-[#1e1e1e] focus:outline-none resize-none" spellcheck="false"></textarea>
-            </div>
+            <!-- Editor Area -->
+            <div class="flex-1 flex flex-col">
+                <!-- Code Input -->
+                <div class="flex-1 relative">
+                    <div class="absolute left-0 top-0 bottom-0 w-12 bg-[#1e1e1e] text-gray-500 text-xs text-right pr-2 pt-4 select-none border-r border-[#404040]" id="lineNumbers"></div>
+                    <textarea id="codeEditor" spellcheck="false" class="w-full h-full pl-14 pr-4 pt-4 bg-[#1e1e1e] text-gray-100 font-mono text-sm focus:outline-none resize-none" placeholder="Type your Python code here..."></textarea>
+                </div>
 
-            <!-- Output Panel -->
-            <div id="output" class="w-64 border-l border-gray-200 dark:border-gray-800 bg-[#f8f9fa] dark:bg-[#252526]">
-                <div class="p-3">
-                    <h2 class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Output</h2>
-                    <pre id="outputText" class="mt-2 text-sm font-mono whitespace-pre-wrap"></pre>
+                <!-- Output Panel -->
+                <div class="h-48 border-t border-[#404040] bg-[#1e1e1e]">
+                    <div class="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#404040]">
+                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Output</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-32 bg-[#404040] rounded-full h-1">
+                                <div id="progressBar" class="bg-[#28a745] h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <span id="progressText" class="text-xs text-gray-400">0% Complete</span>
+                        </div>
+                    </div>
+                    <pre id="outputText" class="p-4 text-sm font-mono text-gray-300 h-[calc(100%-2.5rem)] overflow-auto"></pre>
                 </div>
             </div>
         </div>
 
         <!-- Status Bar -->
-        <div class="flex items-center justify-between px-4 py-1 bg-[#007acc] dark:bg-[#007acc] text-white text-sm">
+        <div class="h-6 bg-[#007acc] text-white text-xs flex items-center px-4">
             <div class="flex items-center space-x-2">
                 <span>Python</span>
-            </div>
-            <div class="flex items-center space-x-2">
-                <div class="w-32 bg-white/20 rounded-full h-1.5">
-                    <div id="progressBar" class="bg-white h-full rounded-full" style="width: 0%"></div>
-                </div>
-                <span id="progressText">0% Complete</span>
+                <span class="text-white/50">|</span>
+                <span>Natural Language Mode</span>
             </div>
         </div>
     </div>

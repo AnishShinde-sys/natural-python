@@ -1,30 +1,39 @@
 :root {
-    --editor-bg: #1e1e1e;
-    --sidebar-bg: #252526;
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --border-color: #404040;
+    --text-primary: #d4d4d4;
+    --text-secondary: #808080;
     --accent-color: #007acc;
+    --success-color: #28a745;
+    --python-color: #3572A5;
 }
 
 body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 /* Code editor */
 #codeEditor {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
     line-height: 1.5;
     tab-size: 4;
     -moz-tab-size: 4;
+    caret-color: #fff;
+}
+
+#codeEditor::placeholder {
+    color: var(--text-secondary);
 }
 
 /* Line numbers */
 #lineNumbers {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
     line-height: 1.5;
-    user-select: none;
 }
 
-/* Custom scrollbar */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
     width: 14px;
     height: 14px;
@@ -35,25 +44,45 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #424242;
-    border: 4px solid transparent;
-    background-clip: padding-box;
+    background-color: #424242;
+    border: 4px solid var(--bg-primary);
     border-radius: 7px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #525252;
-    border: 4px solid transparent;
-    background-clip: padding-box;
+    background-color: #525252;
 }
 
-/* Transitions */
-.transition-all {
-    transition: all 0.2s ease-in-out;
+/* Run button effects */
+#runCode {
+    transition: all 0.2s ease;
 }
 
-/* Run button hover effect */
 #runCode:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#runCode:active {
+    transform: translateY(0);
+}
+
+/* Output text styling */
+#outputText {
+    color: var(--text-primary);
+}
+
+/* Progress bar animation */
+.progress-transition {
+    transition: width 0.3s ease-in-out;
+}
+
+/* Focus styles */
+*:focus {
+    outline: none;
+}
+
+/* Selection styling */
+::selection {
+    background-color: #264f78;
+    color: #fff;
 }
