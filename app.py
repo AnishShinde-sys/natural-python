@@ -27,29 +27,43 @@ class AdvancedInterpreter:
                 r'(?:Make|Create|Set|Let|Define|Initialize|Start|Begin with) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with value) (.*)',
                 r'I want (?:a |an |the )?(\w+) to be (.*)',
                 r'Let\'s make (?:a |an |the )?(\w+) equal to (.*)',
+                r'Give (?:me |us )?(?:a |an |the )?(\w+) (?:equal to|with|of) (.*)',
             ],
             'print': [
                 r'(?:Print|Show|Display|Output|Tell me|What is|Log)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
                 r'What(?:\'s| is)(?: the| a| an)? (?:value of )?([^,]+)',
+                r'Show me(?: the| a| an)? ([^,]+)',
             ],
             'math_ops': [
-                # Addition
                 r'(?:Add|Plus|Increase|Increment|Put|Sum) (.*?) (?:to|into|in|with)(?: the| a| an)? (\w+)',
                 r'Make(?: the| a| an)? (\w+) bigger by (.*)',
-                # Subtraction
+                r'Increase(?: the| a| an)? (\w+) by (.*)',
                 r'(?:Subtract|Minus|Decrease|Take|Remove) (.*?) (?:from|out of)(?: the| a| an)? (\w+)',
                 r'Make(?: the| a| an)? (\w+) smaller by (.*)',
-                # Multiplication
+                r'Decrease(?: the| a| an)? (\w+) by (.*)',
                 r'(?:Multiply|Times)(?: the| a| an)? (\w+) by (.*)',
                 r'Make(?: the| a| an)? (\w+) (.*) times bigger',
-                # Division
+                r'Double(?: the| a| an)? (\w+)',
                 r'(?:Divide|Split)(?: the| a| an)? (\w+) by (.*)',
                 r'Make(?: the| a| an)? (\w+) (.*) times smaller',
+                r'Half(?: the| a| an)? (\w+)',
             ],
             'conditional': [
                 r'If(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
                 r'When(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
                 r'Check if(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
+                r'Whenever(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
+            ],
+            'list_ops': [
+                r'(?:Add|Append|Push) (.*?) (?:to|into|in)(?: the| a| an)? (\w+)(?: list)?',
+                r'(?:Remove|Delete|Take) (.*?) (?:from|out of)(?: the| a| an)? (\w+)(?: list)?',
+                r'Insert (.*?) (?:at|in) position (\d+) (?:of|in|to)(?: the| a| an)? (\w+)(?: list)?',
+            ],
+            'loop': [
+                r'For each (?:item |element )?(?:in|of|from)(?: the| a| an)? (.*?):',
+                r'While(?: the| a| an)? (.*?):',
+                r'Repeat while(?: the| a| an)? (.*?):',
+                r'Keep going (?:as long as|while)(?: the| a| an)? (.*?):',
             ],
         }
 
@@ -132,9 +146,9 @@ class AdvancedInterpreter:
                 self.output.append(f"Error in conditional: {str(e)}")
 
     def process_line(self, line: str):
-        """Process a single line of natural language code"""
+        """Process a single line with better article handling"""
         try:
-            # Remove extra spaces and normalize the line
+            # Normalize the line and handle articles
             line = ' '.join(line.split())
             
             # Try each pattern category
@@ -143,31 +157,28 @@ class AdvancedInterpreter:
                     if match := re.match(pattern, line, re.IGNORECASE):
                         if category == 'create_var':
                             name, value = match.groups()
-                            # Remove any articles from the variable name
-                            name = name.strip().replace('the ', '').replace('a ', '').replace('an ', '')
+                            # Clean variable name
+                            name = self._clean_variable_name(name)
                             return self.create_variable(name, value)
                         elif category == 'print':
                             to_print = match.group(1)
-                            # Remove any articles from what we're printing
-                            to_print = to_print.strip().replace('the ', '').replace('a ', '').replace('an ', '')
+                            # Clean print value
+                            to_print = self._clean_variable_name(to_print)
                             return self.print_value(to_print)
                         elif category == 'math_ops':
-                            if 'Add' in pattern or 'Plus' in pattern or 'Increase' in pattern:
-                                amount, var_name = match.groups()
-                                # Remove any articles from the variable name
-                                var_name = var_name.strip().replace('the ', '').replace('a ', '').replace('an ', '')
-                                return self.math_operation('Add', amount, var_name)
-                            # ... (similar for other operations)
+                            amount, var_name = match.groups()
+                            # Clean variable name
+                            var_name = self._clean_variable_name(var_name)
+                            return self.math_operation('Add', amount, var_name)
                         elif category == 'conditional':
                             condition, action, else_action = match.groups()
-                            # Clean up the condition and actions
-                            condition = condition.strip()
+                            # Clean condition and actions
+                            condition = self._clean_condition(condition)
                             action = action.strip()
                             if else_action:
                                 else_action = else_action.strip()
                             return self.process_conditional(condition, action, else_action)
 
-            # If no pattern matches
             self.output.append(f"I don't understand: {line}")
 
         except Exception as e:
@@ -253,6 +264,22 @@ class AdvancedInterpreter:
         """Get the indentation level of a line"""
         return len(line) - len(line.lstrip())
 
+    def _clean_variable_name(self, name: str) -> str:
+        """Clean variable names by removing articles and extra spaces"""
+        name = name.strip()
+        for article in ['the ', 'a ', 'an ']:
+            name = name.replace(article, '')
+        return name
+
+    def _clean_condition(self, condition: str) -> str:
+        """Clean conditions by handling articles and normalizing spaces"""
+        condition = condition.strip()
+        # Handle articles in conditions
+        condition = re.sub(r'\bthe\s+', '', condition)
+        condition = re.sub(r'\ba\s+', '', condition)
+        condition = re.sub(r'\ban\s+', '', condition)
+        return condition
+
 # Create Flask app
 app = Flask(__name__)
 interpreter = AdvancedInterpreter()
@@ -278,6 +305,11 @@ def run_code():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static/img'),
                              'favicon.png', mimetype='image/png')
+
+@app.route('/site.webmanifest')
+def manifest():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                             'site.webmanifest', mimetype='application/json')
 
 if __name__ == '__main__':
     app.run(debug=True)
