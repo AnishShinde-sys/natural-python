@@ -171,7 +171,11 @@ class AdvancedInterpreter:
                             to_print = match.group(1)
                             return self.print_value(to_print)
                         elif category == 'math_ops':
-                            amount, var_name = match.groups()
+                            if 'Make' in pattern or 'Increase' in pattern:
+                                var_name = match.group(1)
+                                amount = match.group(2)
+                            else:
+                                amount, var_name = match.groups()
                             var_name = self._clean_variable_name(var_name)
                             operation = next((op for op in ['Add', 'Subtract', 'Multiply', 'Divide', 'Double', 'Half', 'Increase', 'Decrease'] 
                                            if op.lower() in pattern.lower()), None)
@@ -182,22 +186,20 @@ class AdvancedInterpreter:
                                 name, value = match.groups()
                                 return self.create_variable(name, value)
                             else:
-                                value = match.group(1).strip('"\'')
+                                value = match.group(1)
                                 list_name = match.group(2)
-                                position = int(match.group(3)) if len(match.groups()) > 2 else None
+                                position = match.group(3) if len(match.groups()) > 2 else None
                                 operation = 'Add' if 'Add' in pattern else 'Remove' if 'Remove' in pattern else 'Insert'
                                 return self.list_operation(operation, value, list_name, position)
                         elif category == 'math_funcs':
                             if 'square root' in pattern or 'sqrt' in pattern:
-                                num = match.group(1)
-                                return self.math_function('sqrt', num)
+                                return self.math_function('sqrt', match.group(1))
                             elif 'pi' in pattern:
                                 return self.math_function('pi')
                             elif 'random' in pattern:
                                 return self.math_function('random')
                             elif 'maximum' in pattern or 'max' in pattern:
-                                values = match.group(1)
-                                return self.math_function('max', values)
+                                return self.math_function('max', match.group(1))
 
             self.output.append(f"I don't understand: {line}")
 
@@ -335,12 +337,19 @@ class AdvancedInterpreter:
             elif func == 'random':
                 self.output.append(f"Random number: {random.random()}")
             elif func == 'max':
-                if args[0] in self.variables:
+                if isinstance(args[0], str) and args[0] in self.variables:
                     values = self.variables[args[0]]
-                    result = max(values)
-                    self.output.append(f"The maximum value in {args[0]} is {result}")
+                    if isinstance(values, list):
+                        result = max(values)
+                        self.output.append(f"The maximum value in {args[0]} is {result}")
+                    else:
+                        self.output.append(f"{args[0]} is not a list")
                 else:
-                    self.output.append(f"Cannot find list {args[0]}")
+                    try:
+                        result = max(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
+                        self.output.append(f"The maximum value is {result}")
+                    except:
+                        self.output.append(f"Cannot evaluate maximum of {args[0]}")
         except Exception as e:
             self.output.append(f"Error in math function {func}: {str(e)}")
 
@@ -359,7 +368,7 @@ class AdvancedInterpreter:
             value = value.strip('"\'')
             
             if operation == 'Add':
-                self.variables[list_name].append(value)
+                self.variables[list_name].append(eval(value, {"__builtins__": self.safe_builtins}, self.variables))
                 self.output.append(f"Added {value} to {list_name}")
             elif operation == 'Remove':
                 if value in self.variables[list_name]:
@@ -368,8 +377,12 @@ class AdvancedInterpreter:
                 else:
                     self.output.append(f"Could not find {value} in {list_name}")
             elif operation == 'Insert':
-                self.variables[list_name].insert(position, value)
-                self.output.append(f"Inserted {value} at position {position} in {list_name}")
+                try:
+                    position = int(position)
+                    self.variables[list_name].insert(position, eval(value, {"__builtins__": self.safe_builtins}, self.variables))
+                    self.output.append(f"Inserted {value} at position {position} in {list_name}")
+                except ValueError:
+                    self.output.append(f"Invalid position: {position}")
 
         except Exception as e:
             self.output.append(f"Error in list operation: {str(e)}")
