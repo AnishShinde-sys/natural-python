@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import re
 import datetime
 import math
@@ -6,6 +6,7 @@ import json
 import random
 from typing import Dict, Any, List
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -272,6 +273,11 @@ def run_code():
     except Exception as e:
         logger.error(f"Error running code: {str(e)}")
         return jsonify({'error': f"Error: {str(e)}"}), 500
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static/img'),
+                             'favicon.png', mimetype='image/png')
 
 if __name__ == '__main__':
     app.run(debug=True)
