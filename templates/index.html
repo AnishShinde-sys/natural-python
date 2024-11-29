@@ -13,30 +13,32 @@
         <!-- Top Navigation -->
         <nav class="top-nav">
             <div class="nav-left">
-                <button class="icon-btn" id="menuToggle">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <button class="icon-btn" id="menuToggle" title="Toggle Sidebar">
+                    <svg width="16" height="16" viewBox="0 0 16 16">
                         <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
                 <div class="breadcrumb">
-                    <span>File</span>
-                    <span>Edit</span>
-                    <span>View</span>
+                    <span>Natural Python</span>
                 </div>
             </div>
             <div class="nav-center">
-                <button class="run-btn" onclick="runCode()">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <button id="runCode" class="run-btn" title="Run Code (Ctrl+Enter)">
+                    <svg width="16" height="16" viewBox="0 0 16 16">
                         <path d="M4 2l10 6-10 6V2z" fill="currentColor"/>
                     </svg>
                     Run
                 </button>
             </div>
             <div class="nav-right">
-                <button class="icon-btn" id="themeToggle">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <button class="icon-btn" id="clearOutput" title="Clear Output">
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                        <path d="M2 4h12M6 4v10M10 4v10M2 4v10h12V4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="themeToggle" title="Toggle Theme">
+                    <svg width="16" height="16" viewBox="0 0 16 16">
                         <path d="M8 11.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" stroke="currentColor" stroke-width="2"/>
-                        <path d="M8 0v2M8 14v2M2.8 2.8l1.4 1.4M11.8 11.8l1.4 1.4M0 8h2M14 8h2M2.8 13.2l1.4-1.4M11.8 4.2l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
             </div>
@@ -44,37 +46,21 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Left Sidebar -->
-            <div class="sidebar" id="sidebar">
-                <div class="sidebar-header">
-                    <h3>EXPLORER</h3>
-                </div>
-                <div class="file-tree">
-                    <div class="folder">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1.5 2.5h5l1 2h7v9h-13v-11z" stroke="currentColor" stroke-width="1.5"/>
-                        </svg>
-                        <span>Project</span>
-                    </div>
-                    <div class="file active">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M3 1.5h7l3.5 3.5v9.5h-10.5v-13z" stroke="currentColor" stroke-width="1.5"/>
-                        </svg>
-                        <span>main.py</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Editor Area -->
             <div class="editor-area">
                 <div class="editor-container">
-                    <textarea id="code-editor">
+                    <div class="editor-wrapper">
+                        <textarea id="codeEditor" spellcheck="false">
+# Welcome to Natural Python!
 # Try these examples:
+
 Make a number called score equal to 10
 Add 5 to score
 Print score
-If score is bigger than 15:
+
+If score is bigger than 12:
     Print "High score!"</textarea>
+                    </div>
                 </div>
 
                 <!-- Output Panel -->
@@ -82,15 +68,10 @@ If score is bigger than 15:
                     <div class="panel-header">
                         <div class="panel-title">Output</div>
                         <div class="panel-actions">
-                            <div class="progress-container">
+                            <div class="progress-wrapper">
                                 <div class="progress-bar" id="progressBar"></div>
+                                <span class="progress-text" id="progressText">0%</span>
                             </div>
-                            <span class="progress-text" id="progressText">0%</span>
-                            <button class="icon-btn" onclick="clearOutput()">
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M1 1l12 12M1 13L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                            </button>
                         </div>
                     </div>
                     <div id="output" class="output-content"></div>
@@ -100,9 +81,14 @@ If score is bigger than 15:
 
         <!-- Status Bar -->
         <div class="status-bar">
-            <div class="status-item">Python</div>
-            <div class="status-item">Natural Language Mode</div>
-            <div class="status-item">UTF-8</div>
+            <div class="status-left">
+                <span class="status-item">Python</span>
+                <span class="status-separator">|</span>
+                <span class="status-item">Natural Language Mode</span>
+            </div>
+            <div class="status-right">
+                <span class="status-item" id="cursorPos">Ln 1, Col 1</span>
+            </div>
         </div>
     </div>
 

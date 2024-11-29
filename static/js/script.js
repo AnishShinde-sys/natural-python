@@ -1,178 +1,128 @@
 let editor;
-let isDark = true;
-let isMenuOpen = true;
+let isRunning = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize CodeMirror
-    editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+    editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
         mode: 'python',
         theme: 'dracula',
         lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
+        lineWrapping: true,
         indentUnit: 4,
         tabSize: 4,
-        lineWrapping: true,
-        extraKeys: {
-            "Tab": function(cm) {
-                cm.replaceSelection("    ", "end");
-            },
-            "Ctrl-Enter": runCode,
-            "Cmd-Enter": runCode
-        },
-        gutters: ["CodeMirror-linenumbers"],
-        lint: true,
+        autofocus: true,
         styleActiveLine: true,
-        styleActiveSelected: true,
-        scrollbarStyle: "overlay"
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        extraKeys: {
+            'Ctrl-Enter': runCode,
+            'Cmd-Enter': runCode,
+            'Tab': (cm) => cm.replaceSelection('    ')
+        }
     });
 
     // Set initial content
-    editor.setValue(`# Welcome to Natural Python IDE!
+    editor.setValue(`# Welcome to Natural Python!
 # Try these examples:
 
 Make a number called score equal to 10
 Add 5 to score
 Print score
 
-# Try an if statement:
 If score is bigger than 12:
-    Print "High score!"
-
-# More operations:
-Multiply 2 by score
-Print score`);
+    Print "High score!"`);
 
     // Setup event listeners
     setupEventListeners();
     
-    // Initial UI state
-    updateTheme();
-    updateMenuState();
+    // Update cursor position initially
+    updateCursorPosition();
 });
 
 function setupEventListeners() {
+    // Run button
+    document.getElementById('runCode').addEventListener('click', runCode);
+
+    // Clear output button
+    document.getElementById('clearOutput').addEventListener('click', clearOutput);
+
     // Theme toggle
-    document.getElementById('themeToggle').addEventListener('click', () => {
-        isDark = !isDark;
-        updateTheme();
-    });
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-    // Menu toggle
-    document.getElementById('menuToggle').addEventListener('click', () => {
-        isMenuOpen = !isMenuOpen;
-        updateMenuState();
-    });
-
-    // File tree interactions
-    document.querySelectorAll('.file').forEach(file => {
-        file.addEventListener('click', () => {
-            document.querySelectorAll('.file').forEach(f => f.classList.remove('active'));
-            file.classList.add('active');
-        });
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', handleKeyboardShortcuts);
+    // Cursor position updates
+    editor.on('cursorActivity', updateCursorPosition);
 }
 
-function updateTheme() {
-    document.body.classList.toggle('theme-dark', isDark);
-    editor.setOption('theme', isDark ? 'dracula' : 'default');
-    
-    // Update theme toggle icon
-    const themeIcon = document.querySelector('#themeToggle svg');
-    themeIcon.innerHTML = isDark ? 
-        '<path d="M12 3a6 6 0 0 0 0 12h6a6 6 0 0 0 0-12h-6z" fill="currentColor"/>' :
-        '<circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" stroke="currentColor" stroke-width="2"/>';
-}
+async function runCode() {
+    if (isRunning) return;
+    isRunning = true;
 
-function updateMenuState() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.style.width = isMenuOpen ? '240px' : '0';
-    sidebar.style.minWidth = isMenuOpen ? '240px' : '0';
-}
-
-function runCode() {
     const code = editor.getValue();
     const outputDiv = document.getElementById('output');
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
+    const runButton = document.getElementById('runCode');
 
-    // Reset output and show loading
+    // Update UI for running state
+    runButton.classList.add('running');
     outputDiv.innerHTML = '<div class="loading">Running code...</div>';
     progressBar.style.width = '0%';
     progressText.textContent = '0%';
 
-    // Simulate progress
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-        progress += 5;
-        progressBar.style.width = `${progress}%`;
-        progressText.textContent = `${progress}%`;
-        if (progress >= 100) clearInterval(progressInterval);
-    }, 50);
+    try {
+        // Start progress animation
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress = Math.min(progress + 5, 90);
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${progress}%`;
+        }, 50);
 
-    // Send code to server
-    fetch('/run_code', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code })
-    })
-    .then(response => response.json())
-    .then(data => {
+        // Send code to server
+        const response = await fetch('/run_code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+
+        const data = await response.json();
+
+        // Complete progress
         clearInterval(progressInterval);
         progressBar.style.width = '100%';
         progressText.textContent = '100%';
-        
+
+        // Show output
         if (data.error) {
             outputDiv.innerHTML = `<pre class="error">${data.error}</pre>`;
         } else {
             outputDiv.innerHTML = `<pre class="success">${data.output}</pre>`;
         }
-    })
-    .catch(error => {
-        clearInterval(progressInterval);
+    } catch (error) {
         outputDiv.innerHTML = `<pre class="error">Error: ${error.message}</pre>`;
-    });
+    } finally {
+        isRunning = false;
+        runButton.classList.remove('running');
+    }
 }
 
 function clearOutput() {
-    const outputDiv = document.getElementById('output');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    
-    outputDiv.innerHTML = '';
-    progressBar.style.width = '0%';
-    progressText.textContent = '0%';
+    document.getElementById('output').innerHTML = '';
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('progressText').textContent = '0%';
 }
 
-function handleKeyboardShortcuts(e) {
-    // Ctrl/Cmd + Enter to run code
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        runCode();
-    }
-    
-    // Ctrl/Cmd + B to toggle sidebar
-    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault();
-        isMenuOpen = !isMenuOpen;
-        updateMenuState();
-    }
+function toggleTheme() {
+    const isDark = document.body.classList.toggle('theme-dark');
+    editor.setOption('theme', isDark ? 'dracula' : 'default');
 }
 
-// Add some helper functions for the editor
-function insertExample(code) {
-    const doc = editor.getDoc();
-    const cursor = doc.getCursor();
-    doc.replaceRange(code + '\n', cursor);
-    editor.focus();
+function updateCursorPosition() {
+    const pos = editor.getCursor();
+    const cursorPosElem = document.getElementById('cursorPos');
+    cursorPosElem.textContent = `Ln ${pos.line + 1}, Col ${pos.ch + 1}`;
 }
 
 // Export functions for global use
 window.runCode = runCode;
 window.clearOutput = clearOutput;
-window.insertExample = insertExample;
