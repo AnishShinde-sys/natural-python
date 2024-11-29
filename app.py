@@ -252,10 +252,13 @@ class AdvancedInterpreter:
             if isinstance(original, str):
                 if operation == 'Add':
                     # Handle string literals by removing quotes
-                    if isinstance(amount, str) and (amount.startswith('"') or amount.startswith("'")):
-                        amount_val = amount.strip('"\'')
-                    elif amount in self.variables:
-                        amount_val = str(self.variables[amount])
+                    if isinstance(amount, str):
+                        if amount.startswith('"') or amount.startswith("'"):
+                            amount_val = amount.strip('"\'')
+                        elif amount in self.variables:
+                            amount_val = str(self.variables[amount])
+                        else:
+                            amount_val = amount
                     else:
                         amount_val = str(amount)
                     result = original + amount_val
@@ -266,24 +269,17 @@ class AdvancedInterpreter:
             # Handle numeric operations
             try:
                 # First try direct conversion for numeric literals
-                if str(amount).replace('.', '', 1).isdigit():
+                if isinstance(amount, (int, float)):
+                    amount_val = float(amount)
+                elif str(amount).replace('.', '', 1).isdigit():
                     amount_val = float(amount)
                 # Then try variable reference
                 elif amount in self.variables:
-                    if isinstance(self.variables[amount], (int, float)):
-                        amount_val = float(self.variables[amount])
-                    else:
-                        self.output.append(f"Cannot convert {amount} to a number")
-                        return
-                # Finally try evaluation
+                    amount_val = float(self.variables[amount])
+                # Finally try evaluation with stripped quotes
                 else:
-                    try:
-                        # Remove quotes for numeric evaluation
-                        clean_amount = amount.strip('"\'') if isinstance(amount, str) else amount
-                        amount_val = float(clean_amount)
-                    except:
-                        self.output.append(f"Cannot convert {amount} to a number")
-                        return
+                    clean_amount = amount.strip('"\'') if isinstance(amount, str) else amount
+                    amount_val = float(clean_amount)
 
                 operations = {
                     'Add': lambda x, y: x + y,
@@ -306,8 +302,10 @@ class AdvancedInterpreter:
                 else:
                     self.output.append(f"Unknown operation: {operation}")
 
+            except ValueError:
+                self.output.append(f"Cannot convert {amount} to a number")
             except Exception as e:
-                self.output.append(f"Cannot perform {operation.lower()} operation: {str(e)}")
+                self.output.append(f"Error in math operation: {str(e)}")
 
         except Exception as e:
             self.output.append(f"Error in math operation: {str(e)}")
@@ -381,7 +379,7 @@ class AdvancedInterpreter:
                     # Handle variable reference
                     elif args[0] in self.variables:
                         num = float(self.variables[args[0]])
-                    # Try evaluation
+                    # Try evaluation with stripped quotes
                     else:
                         clean_arg = args[0].strip('"\'') if isinstance(args[0], str) else args[0]
                         num = float(clean_arg)
@@ -390,9 +388,9 @@ class AdvancedInterpreter:
                 except:
                     self.output.append(f"Cannot calculate square root of {args[0]}")
             elif func == 'pi':
-                self.output.append(f"Pi is {math.pi}")
+                self.output.append(f"Pi is {self.safe_builtins['math']['pi']}")
             elif func == 'random':
-                self.output.append(f"Random number: {random.random()}")
+                self.output.append(f"Random number: {self.safe_builtins['random']()}")
             elif func == 'max':
                 try:
                     if args[0] in self.variables:
@@ -423,12 +421,17 @@ class AdvancedInterpreter:
                 return
 
             # Process the value
-            if isinstance(value, str) and (value.startswith('"') or value.startswith("'")):
-                processed_value = value.strip('"\'')
-            elif value in self.variables:
-                processed_value = self.variables[value]
-            else:
-                processed_value = value  # Use the raw value if not a variable
+            if isinstance(value, str):
+                if value.startswith('"') or value.startswith("'"):
+                    processed_value = value.strip('"\'')
+                elif value in self.variables:
+                    processed_value = self.variables[value]
+                else:
+                    try:
+                        # Try to evaluate as a literal or expression
+                        processed_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
+                    except:
+                        processed_value = value  # Use raw value if evaluation fails
 
             current_list = self.variables[list_name]
 
