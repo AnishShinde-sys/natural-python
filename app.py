@@ -91,12 +91,15 @@ class AdvancedInterpreter:
             while i < len(lines):
                 line = lines[i].strip()
                 if line and not line.startswith('#'):
-                    # Handle multiline constructs
-                    if any(line.startswith(keyword) for keyword in ['Create class', 'Define function', 'For each', 'While']):
+                    # Handle indented blocks after conditionals
+                    if line.endswith(':'):
                         block_lines = [line]
-                        indent = self._get_indent(lines[i+1]) if i+1 < len(lines) else 0
+                        current_indent = self._get_indent(lines[i])
                         i += 1
-                        while i < len(lines) and (not lines[i].strip() or self._get_indent(lines[i]) > indent):
+                        while i < len(lines) and (
+                            not lines[i].strip() or 
+                            self._get_indent(lines[i]) > current_indent
+                        ):
                             block_lines.append(lines[i])
                             i += 1
                         i -= 1  # Adjust for the outer loop increment
@@ -111,36 +114,21 @@ class AdvancedInterpreter:
             return f"Error: {str(e)}"
 
     def process_block(self, lines: List[str]):
-        """Process a block of code (class, function, loop, etc.)"""
+        """Process a block of code (conditionals, loops, etc.)"""
         first_line = lines[0].strip()
         
-        # Class definition
-        if first_line.startswith('Create class'):
-            match = re.match(r'Create class (\w+)(?:\s+extends\s+(\w+))?', first_line)
-            if match:
-                class_name, parent_class = match.groups()
-                self.create_class(class_name, parent_class, lines[1:])
-        
-        # Function definition
-        elif first_line.startswith('Define function'):
-            match = re.match(r'Define function (\w+)\s*\((.*?)\)', first_line)
-            if match:
-                func_name, params = match.groups()
-                self.create_function(func_name, params, lines[1:])
-        
-        # For loop
-        elif first_line.startswith('For each'):
-            match = re.match(r'For each (\w+) in (.*?):', first_line)
-            if match:
-                var_name, iterable = match.groups()
-                self.process_for_loop(var_name, iterable, lines[1:])
-        
-        # While loop
-        elif first_line.startswith('While'):
-            match = re.match(r'While (.*?):', first_line)
-            if match:
-                condition = match.group(1)
-                self.process_while_loop(condition, lines[1:])
+        # Handle If statements
+        if first_line.startswith('If'):
+            condition = first_line[2:-1].strip()  # Remove 'If' and ':'
+            indented_lines = [line.strip() for line in lines[1:] if line.strip()]
+            
+            try:
+                condition = self.translate_condition(condition)
+                if eval(condition, {"__builtins__": self.safe_builtins}, self.variables):
+                    for line in indented_lines:
+                        self.process_line(line)
+            except Exception as e:
+                self.output.append(f"Error in conditional: {str(e)}")
 
     def process_line(self, line: str):
         """Process a single line of natural language code"""
