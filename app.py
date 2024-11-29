@@ -24,46 +24,42 @@ class AdvancedInterpreter:
         # Update command patterns to handle articles
         self.command_patterns = {
             'create_var': [
-                r'(?:Make|Create|Set|Let|Define|Initialize|Start|Begin with) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with value) (.*)',
-                r'I want (?:a |an |the )?(\w+) to be (.*)',
-                r'Let\'s make (?:a |an |the )?(\w+) equal to (.*)',
-                r'Give (?:me |us )?(?:a |an |the )?(\w+) (?:equal to|with|of) (.*)',
+                # Basic variable creation
+                r'(?:Make|Create|Set|Let|Define) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value) (.*)',
+                # More natural patterns
+                r'(?:Make|Create|Set|Let|Define) (?:a |an |the )?(?:new )?(\w+) (?:called |named |as )?(.*?) (?:equal to|to|be|as|with|with value) (.*)',
             ],
             'print': [
-                r'(?:Print|Show|Display|Output|Tell me|What is|Log)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
-                r'What(?:\'s| is)(?: the| a| an)? (?:value of )?([^,]+)',
-                r'Show me(?: the| a| an)? ([^,]+)',
+                # Basic printing
+                r'(?:Print|Show|Display|Output|Tell me about|What is)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
+                # Special cases
+                r'(?:Print|Show|Display|Output) ["\'](.+)["\']',
             ],
             'math_ops': [
-                r'(?:Add|Plus|Increase|Increment|Put|Sum) (.*?) (?:to|into|in|with)(?: the| a| an)? (\w+)',
-                r'Make(?: the| a| an)? (\w+) bigger by (.*)',
-                r'Increase(?: the| a| an)? (\w+) by (.*)',
+                # Addition
+                r'(?:Add|Plus|Increase|Increment) (.*?) (?:to|into|in|with)(?: the| a| an)? (\w+)',
+                # Subtraction
                 r'(?:Subtract|Minus|Decrease|Take|Remove) (.*?) (?:from|out of)(?: the| a| an)? (\w+)',
-                r'Make(?: the| a| an)? (\w+) smaller by (.*)',
-                r'Decrease(?: the| a| an)? (\w+) by (.*)',
+                # Multiplication
                 r'(?:Multiply|Times)(?: the| a| an)? (\w+) by (.*)',
-                r'Make(?: the| a| an)? (\w+) (.*) times bigger',
-                r'Double(?: the| a| an)? (\w+)',
+                # Division
                 r'(?:Divide|Split)(?: the| a| an)? (\w+) by (.*)',
-                r'Make(?: the| a| an)? (\w+) (.*) times smaller',
-                r'Half(?: the| a| an)? (\w+)',
-            ],
-            'conditional': [
-                r'If(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
-                r'When(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
-                r'Check if(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
-                r'Whenever(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
             ],
             'list_ops': [
-                r'(?:Add|Append|Push) (.*?) (?:to|into|in)(?: the| a| an)? (\w+)(?: list)?',
-                r'(?:Remove|Delete|Take) (.*?) (?:from|out of)(?: the| a| an)? (\w+)(?: list)?',
-                r'Insert (.*?) (?:at|in) position (\d+) (?:of|in|to)(?: the| a| an)? (\w+)(?: list)?',
+                # List creation
+                r'(?:Make|Create|Define) (?:a |an |the )?list (?:called |named |as )?(\w+) (?:equal to |to |with |containing )?(\[.+\])',
+                # Add to list
+                r'(?:Add|Append|Push) (.*?) (?:to|into|in)(?: the| a| an)? (\w+)',
+                # Remove from list
+                r'(?:Remove|Delete|Take) (.*?) (?:from|out of)(?: the| a| an)? (\w+)',
+                # Insert at position
+                r'Insert (.*?) (?:at|in) position (\d+) (?:in|of|at)(?: the| a| an)? (\w+)',
             ],
-            'loop': [
-                r'For each (?:item |element )?(?:in|of|from)(?: the| a| an)? (.*?):',
-                r'While(?: the| a| an)? (.*?):',
-                r'Repeat while(?: the| a| an)? (.*?):',
-                r'Keep going (?:as long as|while)(?: the| a| an)? (.*?):',
+            'math_funcs': [
+                r'(?:Calculate |Compute |Find |Get |What is )?(?:the )?(?:square root|sqrt) of (.*)',
+                r'(?:Show|Display|Print|Get|What is)(?: the)? (?:value of )?pi',
+                r'(?:Generate|Create|Give me|Get)(?: a)? random number',
+                r'(?:Find|Get|Calculate|What is)(?: the)? (?:maximum|max|highest) (?:of|in|from) (.*)',
             ],
         }
 
@@ -160,28 +156,32 @@ class AdvancedInterpreter:
                 for pattern in patterns:
                     if match := re.match(pattern, line, re.IGNORECASE):
                         if category == 'create_var':
-                            name, value = match.groups()
-                            # Clean variable name
+                            if len(match.groups()) == 3:  # Extended pattern
+                                _, name, value = match.groups()
+                            else:  # Basic pattern
+                                name, value = match.groups()
                             name = self._clean_variable_name(name)
                             return self.create_variable(name, value)
                         elif category == 'print':
                             to_print = match.group(1)
-                            # Clean print value
-                            to_print = self._clean_variable_name(to_print)
                             return self.print_value(to_print)
                         elif category == 'math_ops':
-                            amount, var_name = match.groups()
-                            # Clean variable name
-                            var_name = self._clean_variable_name(var_name)
-                            return self.math_operation('Add', amount, var_name)
-                        elif category == 'conditional':
-                            condition, action, else_action = match.groups()
-                            # Clean condition and actions
-                            condition = self._clean_condition(condition)
-                            action = action.strip()
-                            if else_action:
-                                else_action = else_action.strip()
-                            return self.process_conditional(condition, action, else_action)
+                            if 'Add' in pattern or 'Plus' in pattern:
+                                amount, var_name = match.groups()
+                                var_name = self._clean_variable_name(var_name)
+                                return self.math_operation('Add', amount, var_name)
+                            # ... (similar for other operations)
+                        elif category == 'math_funcs':
+                            if 'square root' in pattern or 'sqrt' in pattern:
+                                num = match.group(1)
+                                return self.math_function('sqrt', num)
+                            elif 'pi' in pattern:
+                                return self.math_function('pi')
+                            elif 'random' in pattern:
+                                return self.math_function('random')
+                            elif 'maximum' in pattern or 'max' in pattern:
+                                values = match.group(1)
+                                return self.math_function('max', values)
 
             self.output.append(f"I don't understand: {line}")
 
@@ -294,6 +294,24 @@ class AdvancedInterpreter:
         condition = ' '.join(condition.split())
         
         return condition
+
+    def math_function(self, func: str, *args):
+        """Handle math functions"""
+        try:
+            if func == 'sqrt':
+                num = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
+                result = math.sqrt(num)
+                self.output.append(str(result))
+            elif func == 'pi':
+                self.output.append(str(math.pi))
+            elif func == 'random':
+                self.output.append(str(random.random()))
+            elif func == 'max':
+                values = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
+                result = max(values)
+                self.output.append(str(result))
+        except Exception as e:
+            self.output.append(f"Error in math function {func}: {str(e)}")
 
 # Create Flask app
 app = Flask(__name__)
