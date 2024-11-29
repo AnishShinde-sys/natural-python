@@ -36,14 +36,19 @@ class AdvancedInterpreter:
                 r'(?:Print|Show|Display|Output) ["\'](.+)["\']',
             ],
             'math_ops': [
-                # Addition
+                # Addition and Increase
                 r'(?:Add|Plus|Increase|Increment) (.*?) (?:to|into|in|with)(?: the| a| an)? (\w+)',
-                # Subtraction
+                r'Increase(?: the| a| an)? (\w+) by (.*)',
+                r'Make(?: the| a| an)? (\w+) bigger by (.*)',
+                # Subtraction and Decrease
                 r'(?:Subtract|Minus|Decrease|Take|Remove) (.*?) (?:from|out of)(?: the| a| an)? (\w+)',
-                # Multiplication
+                r'Decrease(?: the| a| an)? (\w+) by (.*)',
+                # Multiplication and Double
                 r'(?:Multiply|Times)(?: the| a| an)? (\w+) by (.*)',
-                # Division
+                r'Double(?: the| a| an)? (\w+)',
+                # Division and Half
                 r'(?:Divide|Split)(?: the| a| an)? (\w+) by (.*)',
+                r'Half(?: the| a| an)? (\w+)',
             ],
             'list_ops': [
                 # List creation
@@ -166,11 +171,12 @@ class AdvancedInterpreter:
                             to_print = match.group(1)
                             return self.print_value(to_print)
                         elif category == 'math_ops':
-                            if 'Add' in pattern or 'Plus' in pattern:
-                                amount, var_name = match.groups()
-                                var_name = self._clean_variable_name(var_name)
-                                return self.math_operation('Add', amount, var_name)
-                            # ... (similar for other operations)
+                            amount, var_name = match.groups()
+                            var_name = self._clean_variable_name(var_name)
+                            operation = next((op for op in ['Add', 'Subtract', 'Multiply', 'Divide', 'Double', 'Half', 'Increase', 'Decrease'] 
+                                           if op.lower() in pattern.lower()), None)
+                            if operation:
+                                return self.math_operation(operation, amount, var_name)
                         elif category == 'math_funcs':
                             if 'square root' in pattern or 'sqrt' in pattern:
                                 num = match.group(1)
@@ -231,10 +237,22 @@ class AdvancedInterpreter:
             amount_val = eval(amount, {"__builtins__": self.safe_builtins}, self.variables)
             original = self.variables[var_name]
 
-            if operation == 'Add':
-                self.variables[var_name] += amount_val
-                self.output.append(f"Added {amount_val} to {var_name} ({original} + {amount_val} = {self.variables[var_name]})")
-            # ... (similar for other operations)
+            operations = {
+                'Add': lambda x, y: x + y,
+                'Subtract': lambda x, y: x - y,
+                'Multiply': lambda x, y: x * y,
+                'Divide': lambda x, y: x / y,
+                'Double': lambda x, _: x * 2,
+                'Half': lambda x, _: x / 2,
+                'Increase': lambda x, y: x + y,
+                'Decrease': lambda x, y: x - y,
+            }
+
+            if operation in operations:
+                self.variables[var_name] = operations[operation](original, amount_val)
+                self.output.append(f"{operation}d {var_name} ({original} -> {self.variables[var_name]})")
+            else:
+                self.output.append(f"Unknown operation: {operation}")
 
         except Exception as e:
             self.output.append(f"I couldn't {operation.lower()} {amount} to {var_name}. {str(e)}")
