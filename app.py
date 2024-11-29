@@ -248,39 +248,24 @@ class AdvancedInterpreter:
 
             original = self.variables[var_name]
             
-            # Handle string operations
-            if isinstance(original, str):
-                if operation == 'Add':
-                    # Handle string literals by removing quotes
-                    if isinstance(amount, str):
-                        if amount.startswith('"') or amount.startswith("'"):
-                            amount_val = amount.strip('"\'')
-                        elif amount in self.variables:
-                            amount_val = str(self.variables[amount])
-                        else:
-                            amount_val = amount
-                    else:
-                        amount_val = str(amount)
-                    result = original + amount_val
-                    self.variables[var_name] = result
-                    self.output.append(f"Added to {var_name} ({original} -> {result})")
-                    return
-
-            # Handle numeric operations
+            # Process the amount first
             try:
-                # First try direct conversion for numeric literals
-                if isinstance(amount, (int, float)):
-                    amount_val = float(amount)
+                # Handle variable reference first
+                if amount in self.variables:
+                    amount_val = self.variables[amount]
+                # Then try direct conversion for numeric literals
                 elif str(amount).replace('.', '', 1).isdigit():
                     amount_val = float(amount)
-                # Then try variable reference
-                elif amount in self.variables:
-                    amount_val = float(self.variables[amount])
                 # Finally try evaluation with stripped quotes
                 else:
                     clean_amount = amount.strip('"\'') if isinstance(amount, str) else amount
-                    amount_val = float(clean_amount)
+                    try:
+                        amount_val = float(clean_amount)
+                    except ValueError:
+                        self.output.append(f"Cannot convert {amount} to a number")
+                        return
 
+                # Rest of the function remains the same
                 operations = {
                     'Add': lambda x, y: x + y,
                     'Subtract': lambda x, y: x - y,
@@ -302,8 +287,6 @@ class AdvancedInterpreter:
                 else:
                     self.output.append(f"Unknown operation: {operation}")
 
-            except ValueError:
-                self.output.append(f"Cannot convert {amount} to a number")
             except Exception as e:
                 self.output.append(f"Error in math operation: {str(e)}")
 
@@ -371,26 +354,24 @@ class AdvancedInterpreter:
         try:
             if func == 'sqrt':
                 try:
-                    # Handle numeric literal
-                    if isinstance(args[0], (int, float)):
-                        num = float(args[0])
+                    # Handle variable reference first
+                    if args[0] in self.variables:
+                        num = float(self.variables[args[0]])
+                    # Then try direct conversion
                     elif str(args[0]).replace('.', '', 1).isdigit():
                         num = float(args[0])
-                    # Handle variable reference
-                    elif args[0] in self.variables:
-                        num = float(self.variables[args[0]])
-                    # Try evaluation with stripped quotes
+                    # Finally try evaluation
                     else:
                         clean_arg = args[0].strip('"\'') if isinstance(args[0], str) else args[0]
-                        num = float(clean_arg)
+                        num = float(eval(clean_arg, {"__builtins__": self.safe_builtins}, self.variables))
                     result = math.sqrt(num)
                     self.output.append(f"Square root of {num} is {result}")
                 except:
                     self.output.append(f"Cannot calculate square root of {args[0]}")
             elif func == 'pi':
-                self.output.append(f"Pi is {self.safe_builtins['math']['pi']}")
+                self.output.append(str(self.safe_builtins['math']['pi']))
             elif func == 'random':
-                self.output.append(f"Random number: {self.safe_builtins['random']()}")
+                self.output.append(str(self.safe_builtins['random']()))
             elif func == 'max':
                 try:
                     if args[0] in self.variables:
