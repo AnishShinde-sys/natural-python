@@ -252,18 +252,15 @@ class AdvancedInterpreter:
             if isinstance(original, str):
                 if operation == 'Add':
                     # Handle string literals by removing quotes
-                    if amount.startswith('"') or amount.startswith("'"):
+                    if isinstance(amount, str) and (amount.startswith('"') or amount.startswith("'")):
                         amount_val = amount.strip('"\'')
                     elif amount in self.variables:
                         amount_val = str(self.variables[amount])
                     else:
-                        amount_val = str(amount)  # Convert to string
+                        amount_val = str(amount)
                     result = original + amount_val
                     self.variables[var_name] = result
                     self.output.append(f"Added to {var_name} ({original} -> {result})")
-                    return
-                else:
-                    self.output.append(f"Cannot perform {operation.lower()} on strings")
                     return
 
             # Handle numeric operations
@@ -281,34 +278,36 @@ class AdvancedInterpreter:
                 # Finally try evaluation
                 else:
                     try:
-                        amount_val = float(eval(amount, {"__builtins__": self.safe_builtins}, self.variables))
+                        # Remove quotes for numeric evaluation
+                        clean_amount = amount.strip('"\'') if isinstance(amount, str) else amount
+                        amount_val = float(clean_amount)
                     except:
                         self.output.append(f"Cannot convert {amount} to a number")
                         return
-            except:
-                self.output.append(f"Cannot convert {amount} to a number")
-                return
 
-            operations = {
-                'Add': lambda x, y: x + y,
-                'Subtract': lambda x, y: x - y,
-                'Multiply': lambda x, y: x * y,
-                'Divide': lambda x, y: x / y if y != 0 else None,
-                'Double': lambda x, _: x * 2,
-                'Half': lambda x, _: x / 2,
-                'Increase': lambda x, y: x + y,
-                'Decrease': lambda x, y: x - y
-            }
+                operations = {
+                    'Add': lambda x, y: x + y,
+                    'Subtract': lambda x, y: x - y,
+                    'Multiply': lambda x, y: x * y,
+                    'Divide': lambda x, y: x / y if y != 0 else None,
+                    'Double': lambda x, _: x * 2,
+                    'Half': lambda x, _: x / 2,
+                    'Increase': lambda x, y: x + y,
+                    'Decrease': lambda x, y: x - y
+                }
 
-            if operation in operations:
-                result = operations[operation](float(original), amount_val)
-                if result is not None:
-                    self.variables[var_name] = result
-                    self.output.append(f"{operation}d {var_name} ({original} -> {result})")
+                if operation in operations:
+                    result = operations[operation](float(original), amount_val)
+                    if result is not None:
+                        self.variables[var_name] = result
+                        self.output.append(f"{operation}d {var_name} ({original} -> {result})")
+                    else:
+                        self.output.append(f"Cannot divide by zero")
                 else:
-                    self.output.append(f"Cannot divide by zero")
-            else:
-                self.output.append(f"Unknown operation: {operation}")
+                    self.output.append(f"Unknown operation: {operation}")
+
+            except Exception as e:
+                self.output.append(f"Cannot perform {operation.lower()} operation: {str(e)}")
 
         except Exception as e:
             self.output.append(f"Error in math operation: {str(e)}")
@@ -375,14 +374,17 @@ class AdvancedInterpreter:
             if func == 'sqrt':
                 try:
                     # Handle numeric literal
-                    if str(args[0]).replace('.', '', 1).isdigit():
+                    if isinstance(args[0], (int, float)):
+                        num = float(args[0])
+                    elif str(args[0]).replace('.', '', 1).isdigit():
                         num = float(args[0])
                     # Handle variable reference
                     elif args[0] in self.variables:
                         num = float(self.variables[args[0]])
                     # Try evaluation
                     else:
-                        num = float(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
+                        clean_arg = args[0].strip('"\'') if isinstance(args[0], str) else args[0]
+                        num = float(clean_arg)
                     result = math.sqrt(num)
                     self.output.append(f"Square root of {num} is {result}")
                 except:
@@ -421,15 +423,12 @@ class AdvancedInterpreter:
                 return
 
             # Process the value
-            if value.startswith('"') or value.startswith("'"):
+            if isinstance(value, str) and (value.startswith('"') or value.startswith("'")):
                 processed_value = value.strip('"\'')
             elif value in self.variables:
                 processed_value = self.variables[value]
             else:
-                try:
-                    processed_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
-                except:
-                    processed_value = value  # Use the raw value if evaluation fails
+                processed_value = value  # Use the raw value if not a variable
 
             current_list = self.variables[list_name]
 
@@ -437,14 +436,11 @@ class AdvancedInterpreter:
                 current_list.append(processed_value)
                 self.output.append(f"Added {processed_value} to {list_name}")
             elif operation == 'Remove':
-                try:
-                    if processed_value in current_list:
-                        current_list.remove(processed_value)
-                        self.output.append(f"Removed {processed_value} from {list_name}")
-                    else:
-                        self.output.append(f"Could not find {processed_value} in {list_name}")
-                except Exception as e:
-                    self.output.append(f"Could not remove {processed_value}: {str(e)}")
+                if processed_value in current_list:
+                    current_list.remove(processed_value)
+                    self.output.append(f"Removed {processed_value} from {list_name}")
+                else:
+                    self.output.append(f"Could not find {processed_value} in {list_name}")
             elif operation == 'Insert':
                 try:
                     pos = int(position) if position else 0
