@@ -246,13 +246,11 @@ class AdvancedInterpreter:
                 self.output.append(f"I can't find a variable called {var_name}")
                 return
 
-            # Handle string literals in amount
+            # Handle numeric literals and variable references
             try:
                 if isinstance(amount, str):
-                    if amount.startswith('"') and amount.endswith('"'):
-                        amount_val = amount.strip('"')
-                    elif amount.startswith("'") and amount.endswith("'"):
-                        amount_val = amount.strip("'")
+                    if amount.isdigit() or (amount.replace('.', '', 1).isdigit() and amount.count('.') < 2):
+                        amount_val = float(amount)
                     else:
                         amount_val = float(eval(amount, {"__builtins__": self.safe_builtins}, self.variables))
             except:
@@ -263,7 +261,7 @@ class AdvancedInterpreter:
             result = None
 
             operations = {
-                'Add': lambda x, y: x + y if isinstance(x, (int, float, str, list)) else None,
+                'Add': lambda x, y: x + y if isinstance(x, (int, float)) else None,
                 'Subtract': lambda x, y: x - y if isinstance(x, (int, float)) else None,
                 'Multiply': lambda x, y: x * y if isinstance(x, (int, float)) else None,
                 'Divide': lambda x, y: x / y if isinstance(x, (int, float)) and y != 0 else None,
@@ -346,7 +344,10 @@ class AdvancedInterpreter:
         """Handle math functions"""
         try:
             if func == 'sqrt':
-                num = float(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
+                try:
+                    num = float(args[0].strip('"\''))
+                except:
+                    num = float(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
                 result = math.sqrt(num)
                 self.output.append(f"The square root of {num} is {result}")
             elif func == 'pi':
@@ -354,23 +355,20 @@ class AdvancedInterpreter:
             elif func == 'random':
                 self.output.append(f"Random number: {random.random()}")
             elif func == 'max':
-                if args[0] in self.variables:
-                    values = self.variables[args[0]]
+                try:
+                    if args[0] in self.variables:
+                        values = self.variables[args[0]]
+                    else:
+                        values = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
+                    
                     if isinstance(values, (list, tuple)):
                         result = max(values)
-                        self.output.append(f"The maximum value in {args[0]} is {result}")
+                        self.output.append(f"The maximum value is {result}")
                     else:
-                        self.output.append(f"{args[0]} is not a list or tuple")
-                else:
-                    try:
-                        value = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
-                        if isinstance(value, (list, tuple)):
-                            result = max(value)
-                            self.output.append(f"The maximum value is {result}")
-                        else:
-                            self.output.append(f"Cannot find maximum: {args[0]} is not a list or tuple")
-                    except:
-                        self.output.append(f"Cannot evaluate maximum of {args[0]}")
+                        self.output.append(f"Cannot find maximum: value is not a list or tuple")
+                except Exception as e:
+                    self.output.append(f"Cannot evaluate maximum: {str(e)}")
+
         except Exception as e:
             self.output.append(f"Error in math function {func}: {str(e)}")
 
@@ -385,17 +383,8 @@ class AdvancedInterpreter:
                 self.output.append(f"{list_name} is not a list")
                 return
 
-            # Handle string literals and variable references
-            try:
-                if value.startswith('"') and value.endswith('"'):
-                    processed_value = value.strip('"')
-                elif value.startswith("'") and value.endswith("'"):
-                    processed_value = value.strip("'")
-                else:
-                    processed_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
-            except:
-                self.output.append(f"Invalid value: {value}")
-                return
+            # Handle string literals
+            processed_value = value.strip('"\'')  # Remove quotes if present
 
             if operation == 'Add':
                 self.variables[list_name].append(processed_value)
@@ -414,7 +403,7 @@ class AdvancedInterpreter:
                         self.output.append(f"Inserted {processed_value} at position {pos} in {list_name}")
                     else:
                         self.output.append(f"Invalid position {pos} for list of length {len(self.variables[list_name])}")
-                except ValueError:
+                except (ValueError, TypeError):
                     self.output.append(f"Invalid position: {position}")
 
         except Exception as e:
