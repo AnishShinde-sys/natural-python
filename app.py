@@ -241,33 +241,50 @@ class AdvancedInterpreter:
 
     def math_operation(self, operation: str, amount: str, var_name: str):
         """Handle math operations with better error handling"""
-        if var_name not in self.variables:
-            self.output.append(f"I can't find a variable called {var_name}")
-            return
-
         try:
-            amount_val = eval(amount, {"__builtins__": self.safe_builtins}, self.variables)
+            if var_name not in self.variables:
+                self.output.append(f"I can't find a variable called {var_name}")
+                return
+
+            # Handle string literals in amount
+            try:
+                if isinstance(amount, str):
+                    if amount.startswith('"') and amount.endswith('"'):
+                        amount_val = amount.strip('"')
+                    elif amount.startswith("'") and amount.endswith("'"):
+                        amount_val = amount.strip("'")
+                    else:
+                        amount_val = float(eval(amount, {"__builtins__": self.safe_builtins}, self.variables))
+            except:
+                self.output.append(f"Invalid amount: {amount}")
+                return
+
             original = self.variables[var_name]
+            result = None
 
             operations = {
-                'Add': lambda x, y: x + y,
-                'Subtract': lambda x, y: x - y,
-                'Multiply': lambda x, y: x * y,
-                'Divide': lambda x, y: x / y,
-                'Double': lambda x, _: x * 2,
-                'Half': lambda x, _: x / 2,
-                'Increase': lambda x, y: x + y,
-                'Decrease': lambda x, y: x - y,
+                'Add': lambda x, y: x + y if isinstance(x, (int, float, str, list)) else None,
+                'Subtract': lambda x, y: x - y if isinstance(x, (int, float)) else None,
+                'Multiply': lambda x, y: x * y if isinstance(x, (int, float)) else None,
+                'Divide': lambda x, y: x / y if isinstance(x, (int, float)) and y != 0 else None,
+                'Double': lambda x, _: x * 2 if isinstance(x, (int, float)) else None,
+                'Half': lambda x, _: x / 2 if isinstance(x, (int, float)) else None,
+                'Increase': lambda x, y: x + y if isinstance(x, (int, float)) else None,
+                'Decrease': lambda x, y: x - y if isinstance(x, (int, float)) else None
             }
 
             if operation in operations:
-                self.variables[var_name] = operations[operation](original, amount_val)
-                self.output.append(f"{operation}d {var_name} ({original} -> {self.variables[var_name]})")
+                result = operations[operation](original, amount_val)
+                if result is not None:
+                    self.variables[var_name] = result
+                    self.output.append(f"{operation}d {var_name} ({original} -> {result})")
+                else:
+                    self.output.append(f"Cannot perform {operation.lower()} operation on {type(original).__name__}")
             else:
                 self.output.append(f"Unknown operation: {operation}")
 
         except Exception as e:
-            self.output.append(f"I couldn't {operation.lower()} {amount} to {var_name}. {str(e)}")
+            self.output.append(f"Error in math operation: {str(e)}")
 
     def translate_condition(self, condition: str) -> str:
         """Translate natural language conditions to Python with better article handling"""
@@ -337,17 +354,21 @@ class AdvancedInterpreter:
             elif func == 'random':
                 self.output.append(f"Random number: {random.random()}")
             elif func == 'max':
-                if isinstance(args[0], str) and args[0] in self.variables:
+                if args[0] in self.variables:
                     values = self.variables[args[0]]
-                    if isinstance(values, list):
+                    if isinstance(values, (list, tuple)):
                         result = max(values)
                         self.output.append(f"The maximum value in {args[0]} is {result}")
                     else:
-                        self.output.append(f"{args[0]} is not a list")
+                        self.output.append(f"{args[0]} is not a list or tuple")
                 else:
                     try:
-                        result = max(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
-                        self.output.append(f"The maximum value is {result}")
+                        value = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
+                        if isinstance(value, (list, tuple)):
+                            result = max(value)
+                            self.output.append(f"The maximum value is {result}")
+                        else:
+                            self.output.append(f"Cannot find maximum: {args[0]} is not a list or tuple")
                     except:
                         self.output.append(f"Cannot evaluate maximum of {args[0]}")
         except Exception as e:
@@ -355,32 +376,44 @@ class AdvancedInterpreter:
 
     def list_operation(self, operation: str, value: str, list_name: str, position: int = None):
         """Handle list operations"""
-        if list_name not in self.variables:
-            self.output.append(f"I can't find a list called {list_name}")
-            return
-
         try:
+            if list_name not in self.variables:
+                self.output.append(f"I can't find a list called {list_name}")
+                return
+
             if not isinstance(self.variables[list_name], list):
                 self.output.append(f"{list_name} is not a list")
                 return
 
-            # Remove quotes if present
-            value = value.strip('"\'')
-            
-            if operation == 'Add':
-                self.variables[list_name].append(eval(value, {"__builtins__": self.safe_builtins}, self.variables))
-                self.output.append(f"Added {value} to {list_name}")
-            elif operation == 'Remove':
-                if value in self.variables[list_name]:
-                    self.variables[list_name].remove(value)
-                    self.output.append(f"Removed {value} from {list_name}")
+            # Handle string literals and variable references
+            try:
+                if value.startswith('"') and value.endswith('"'):
+                    processed_value = value.strip('"')
+                elif value.startswith("'") and value.endswith("'"):
+                    processed_value = value.strip("'")
                 else:
-                    self.output.append(f"Could not find {value} in {list_name}")
+                    processed_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
+            except:
+                self.output.append(f"Invalid value: {value}")
+                return
+
+            if operation == 'Add':
+                self.variables[list_name].append(processed_value)
+                self.output.append(f"Added {processed_value} to {list_name}")
+            elif operation == 'Remove':
+                if processed_value in self.variables[list_name]:
+                    self.variables[list_name].remove(processed_value)
+                    self.output.append(f"Removed {processed_value} from {list_name}")
+                else:
+                    self.output.append(f"Could not find {processed_value} in {list_name}")
             elif operation == 'Insert':
                 try:
-                    position = int(position)
-                    self.variables[list_name].insert(position, eval(value, {"__builtins__": self.safe_builtins}, self.variables))
-                    self.output.append(f"Inserted {value} at position {position} in {list_name}")
+                    pos = int(position)
+                    if 0 <= pos <= len(self.variables[list_name]):
+                        self.variables[list_name].insert(pos, processed_value)
+                        self.output.append(f"Inserted {processed_value} at position {pos} in {list_name}")
+                    else:
+                        self.output.append(f"Invalid position {pos} for list of length {len(self.variables[list_name])}")
                 except ValueError:
                     self.output.append(f"Invalid position: {position}")
 
