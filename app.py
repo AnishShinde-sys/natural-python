@@ -217,6 +217,150 @@ class AdvancedInterpreter:
         except Exception as e:
             self.output.append(f"Error in math operation: {str(e)}")
 
+    def process_code(self, code: str) -> str:
+        """Process multiple lines of code"""
+        self.output = []
+        try:
+            # Process each line
+            lines = code.split('\n')
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
+                if line and not line.startswith('#'):
+                    # Handle indented blocks after conditionals
+                    if line.endswith(':'):
+                        block_lines = [line]
+                        current_indent = self._get_indent(lines[i])
+                        i += 1
+                        while i < len(lines) and (
+                            not lines[i].strip() or 
+                            self._get_indent(lines[i]) > current_indent
+                        ):
+                            block_lines.append(lines[i])
+                            i += 1
+                        i -= 1  # Adjust for the outer loop increment
+                        self.process_block(block_lines)
+                    else:
+                        self.process_line(line)
+                i += 1
+            
+            return '\n'.join(self.output)
+        except Exception as e:
+            logger.error(f"Error processing code: {str(e)}")
+            return f"Error: {str(e)}"
+
+    def process_block(self, lines: List[str]):
+        """Process a block of code (conditionals, loops, etc.)"""
+        first_line = lines[0].strip()
+        
+        # Handle If statements
+        if first_line.startswith('If'):
+            condition = first_line[2:-1].strip() if first_line.endswith(':') else first_line[2:].strip()
+            indented_lines = [line.strip() for line in lines[1:] if line.strip()]
+            
+            try:
+                condition = self._clean_condition(condition)
+                condition = self.translate_condition(condition)
+                
+                if eval(condition, {"__builtins__": self.safe_builtins}, self.variables):
+                    for line in indented_lines:
+                        self.process_line(line)
+            except Exception as e:
+                self.output.append(f"Error in if statement: {str(e)}")
+
+    def create_variable(self, name: str, value: str):
+        """Handle variable creation with improved error handling"""
+        try:
+            # Clean the value string
+            value = value.strip()
+            
+            # Try to evaluate the value
+            try:
+                evaluated_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
+            except:
+                # If evaluation fails, treat as string literal
+                evaluated_value = value.strip('"\'')
+            
+            self.variables[name] = evaluated_value
+            self.output.append(f"Created {name} = {evaluated_value}")
+        except Exception as e:
+            self.output.append(f"I couldn't create {name}. {str(e)}")
+
+    def print_value(self, to_print: str):
+        """Handle printing values with improved string handling"""
+        to_print = to_print.strip()
+        try:
+            # Handle string literals
+            if (to_print.startswith('"') and to_print.endswith('"')) or \
+               (to_print.startswith("'") and to_print.endswith("'")):
+                self.output.append(to_print[1:-1])
+            # Handle math constants
+            elif to_print == 'pi':
+                self.output.append(str(self.safe_builtins['math']['pi']))
+            # Handle variables and expressions
+            else:
+                if to_print in self.variables:
+                    result = self.variables[to_print]
+                else:
+                    result = eval(to_print, {"__builtins__": self.safe_builtins}, self.variables)
+                self.output.append(str(result))
+        except Exception as e:
+            self.output.append(f"I couldn't show {to_print}. {str(e)}")
+
+    def translate_condition(self, condition: str) -> str:
+        """Translate natural language conditions to Python"""
+        condition = self._clean_condition(condition)
+        
+        translations = {
+            'is bigger than': '>',
+            'is greater than': '>',
+            'is less than': '<',
+            'equals': '==',
+            'is equal to': '==',
+            'is not equal to': '!=',
+            'is greater than or equal to': '>=',
+            'is less than or equal to': '<=',
+            'and': 'and',
+            'or': 'or',
+            'not': 'not',
+            'contains': 'in',
+            'is in': 'in',
+            'is': '=='
+        }
+        
+        for phrase, operator in translations.items():
+            condition = condition.replace(phrase, operator)
+        
+        # Clean up spaces around operators
+        condition = re.sub(r'\s+([><=!]+)\s+', r'\1', condition)
+        
+        return condition
+
+    def _get_indent(self, line: str) -> int:
+        """Get the indentation level of a line"""
+        return len(line) - len(line.lstrip())
+
+    def _clean_variable_name(self, name: str) -> str:
+        """Clean variable names by removing articles and extra spaces"""
+        name = name.strip()
+        for article in ['the ', 'a ', 'an ']:
+            name = name.replace(article, '')
+        return name
+
+    def _clean_condition(self, condition: str) -> str:
+        """Clean conditions by handling articles and normalizing spaces"""
+        condition = condition.strip()
+        
+        # Handle articles with word boundaries
+        condition = re.sub(r'\bthe\s+', '', condition)
+        condition = re.sub(r'\ba\s+', '', condition)
+        condition = re.sub(r'\ban\s+', '', condition)
+        
+        # Normalize spaces
+        condition = ' '.join(condition.split())
+        
+        return condition
+
 # Create Flask app
 app = Flask(__name__)
 interpreter = AdvancedInterpreter()
