@@ -132,18 +132,22 @@ class AdvancedInterpreter:
         """Process a block of code (conditionals, loops, etc.)"""
         first_line = lines[0].strip()
         
-        # Handle If statements
+        # Handle If statements with better article handling
         if first_line.startswith('If'):
-            condition = first_line[2:-1].strip()  # Remove 'If' and ':'
+            # Extract condition and remove 'If' and ':'
+            condition = first_line[2:-1].strip() if first_line.endswith(':') else first_line[2:].strip()
             indented_lines = [line.strip() for line in lines[1:] if line.strip()]
             
             try:
+                # Clean and translate the condition
+                condition = self._clean_condition(condition)
                 condition = self.translate_condition(condition)
+                
                 if eval(condition, {"__builtins__": self.safe_builtins}, self.variables):
                     for line in indented_lines:
                         self.process_line(line)
             except Exception as e:
-                self.output.append(f"Error in conditional: {str(e)}")
+                self.output.append(f"Error in if statement: {str(e)}")
 
     def process_line(self, line: str):
         """Process a single line with better article handling"""
@@ -236,7 +240,10 @@ class AdvancedInterpreter:
             self.output.append(f"I couldn't {operation.lower()} {amount} to {var_name}. {str(e)}")
 
     def translate_condition(self, condition: str) -> str:
-        """Translate natural language conditions to Python"""
+        """Translate natural language conditions to Python with better article handling"""
+        # First clean any articles
+        condition = self._clean_condition(condition)
+        
         translations = {
             'is bigger than': '>',
             'is greater than': '>',
@@ -258,6 +265,9 @@ class AdvancedInterpreter:
         for phrase, operator in translations.items():
             condition = condition.replace(phrase, operator)
         
+        # Clean up any extra spaces around operators
+        condition = re.sub(r'\s+([><=!]+)\s+', r'\1', condition)
+        
         return condition
 
     def _get_indent(self, line: str) -> int:
@@ -274,10 +284,15 @@ class AdvancedInterpreter:
     def _clean_condition(self, condition: str) -> str:
         """Clean conditions by handling articles and normalizing spaces"""
         condition = condition.strip()
-        # Handle articles in conditions
+        
+        # Handle articles with word boundaries
         condition = re.sub(r'\bthe\s+', '', condition)
         condition = re.sub(r'\ba\s+', '', condition)
         condition = re.sub(r'\ban\s+', '', condition)
+        
+        # Normalize spaces
+        condition = ' '.join(condition.split())
+        
         return condition
 
 # Create Flask app
