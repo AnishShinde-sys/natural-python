@@ -177,6 +177,16 @@ class AdvancedInterpreter:
                                            if op.lower() in pattern.lower()), None)
                             if operation:
                                 return self.math_operation(operation, amount, var_name)
+                        elif category == 'list_ops':
+                            if 'Make' in pattern or 'Create' in pattern:
+                                name, value = match.groups()
+                                return self.create_variable(name, value)
+                            else:
+                                value = match.group(1).strip('"\'')
+                                list_name = match.group(2)
+                                position = int(match.group(3)) if len(match.groups()) > 2 else None
+                                operation = 'Add' if 'Add' in pattern else 'Remove' if 'Remove' in pattern else 'Insert'
+                                return self.list_operation(operation, value, list_name, position)
                         elif category == 'math_funcs':
                             if 'square root' in pattern or 'sqrt' in pattern:
                                 num = match.group(1)
@@ -317,19 +327,52 @@ class AdvancedInterpreter:
         """Handle math functions"""
         try:
             if func == 'sqrt':
-                num = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
+                num = float(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
                 result = math.sqrt(num)
-                self.output.append(str(result))
+                self.output.append(f"The square root of {num} is {result}")
             elif func == 'pi':
-                self.output.append(str(math.pi))
+                self.output.append(f"The value of pi is {math.pi}")
             elif func == 'random':
-                self.output.append(str(random.random()))
+                self.output.append(f"Random number: {random.random()}")
             elif func == 'max':
-                values = eval(args[0], {"__builtins__": self.safe_builtins}, self.variables)
-                result = max(values)
-                self.output.append(str(result))
+                if args[0] in self.variables:
+                    values = self.variables[args[0]]
+                    result = max(values)
+                    self.output.append(f"The maximum value in {args[0]} is {result}")
+                else:
+                    self.output.append(f"Cannot find list {args[0]}")
         except Exception as e:
             self.output.append(f"Error in math function {func}: {str(e)}")
+
+    def list_operation(self, operation: str, value: str, list_name: str, position: int = None):
+        """Handle list operations"""
+        if list_name not in self.variables:
+            self.output.append(f"I can't find a list called {list_name}")
+            return
+
+        try:
+            if not isinstance(self.variables[list_name], list):
+                self.output.append(f"{list_name} is not a list")
+                return
+
+            # Remove quotes if present
+            value = value.strip('"\'')
+            
+            if operation == 'Add':
+                self.variables[list_name].append(value)
+                self.output.append(f"Added {value} to {list_name}")
+            elif operation == 'Remove':
+                if value in self.variables[list_name]:
+                    self.variables[list_name].remove(value)
+                    self.output.append(f"Removed {value} from {list_name}")
+                else:
+                    self.output.append(f"Could not find {value} in {list_name}")
+            elif operation == 'Insert':
+                self.variables[list_name].insert(position, value)
+                self.output.append(f"Inserted {value} at position {position} in {list_name}")
+
+        except Exception as e:
+            self.output.append(f"Error in list operation: {str(e)}")
 
 # Create Flask app
 app = Flask(__name__)
