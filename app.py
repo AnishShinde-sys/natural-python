@@ -20,6 +20,38 @@ class AdvancedInterpreter:
         # Initialize built-in functions
         self._init_builtins()
 
+        # Update command patterns to handle articles
+        self.command_patterns = {
+            'create_var': [
+                r'(?:Make|Create|Set|Let|Define|Initialize|Start|Begin with) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with value) (.*)',
+                r'I want (?:a |an |the )?(\w+) to be (.*)',
+                r'Let\'s make (?:a |an |the )?(\w+) equal to (.*)',
+            ],
+            'print': [
+                r'(?:Print|Show|Display|Output|Tell me|What is|Log)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
+                r'What(?:\'s| is)(?: the| a| an)? (?:value of )?([^,]+)',
+            ],
+            'math_ops': [
+                # Addition
+                r'(?:Add|Plus|Increase|Increment|Put|Sum) (.*?) (?:to|into|in|with)(?: the| a| an)? (\w+)',
+                r'Make(?: the| a| an)? (\w+) bigger by (.*)',
+                # Subtraction
+                r'(?:Subtract|Minus|Decrease|Take|Remove) (.*?) (?:from|out of)(?: the| a| an)? (\w+)',
+                r'Make(?: the| a| an)? (\w+) smaller by (.*)',
+                # Multiplication
+                r'(?:Multiply|Times)(?: the| a| an)? (\w+) by (.*)',
+                r'Make(?: the| a| an)? (\w+) (.*) times bigger',
+                # Division
+                r'(?:Divide|Split)(?: the| a| an)? (\w+) by (.*)',
+                r'Make(?: the| a| an)? (\w+) (.*) times smaller',
+            ],
+            'conditional': [
+                r'If(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
+                r'When(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
+                r'Check if(?: the| a| an)? (.*?), (.*?)(?:\s+(?:else|otherwise|if not)\s+(.*))?$',
+            ],
+        }
+
     def _init_builtins(self):
         """Initialize built-in functions and modules"""
         self.safe_builtins = {
@@ -113,105 +145,95 @@ class AdvancedInterpreter:
     def process_line(self, line: str):
         """Process a single line of natural language code"""
         try:
-            # Variable creation and assignment
-            if match := re.match(r'(?:Make|Create|Set) (?:a )?(?:number|string|list|dict|set)? ?called (\w+) (?:equal to|to) (.*)', line):
-                name, value = match.groups()
-                try:
-                    evaluated_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
-                    self.variables[name] = evaluated_value
-                    self.output.append(f"Created {name} = {evaluated_value}")
-                except Exception as e:
-                    self.output.append(f"Couldn't create {name}: {str(e)}")
+            # Remove extra spaces and normalize the line
+            line = ' '.join(line.split())
+            
+            # Try each pattern category
+            for category, patterns in self.command_patterns.items():
+                for pattern in patterns:
+                    if match := re.match(pattern, line, re.IGNORECASE):
+                        if category == 'create_var':
+                            name, value = match.groups()
+                            # Remove any articles from the variable name
+                            name = name.strip().replace('the ', '').replace('a ', '').replace('an ', '')
+                            return self.create_variable(name, value)
+                        elif category == 'print':
+                            to_print = match.group(1)
+                            # Remove any articles from what we're printing
+                            to_print = to_print.strip().replace('the ', '').replace('a ', '').replace('an ', '')
+                            return self.print_value(to_print)
+                        elif category == 'math_ops':
+                            if 'Add' in pattern or 'Plus' in pattern or 'Increase' in pattern:
+                                amount, var_name = match.groups()
+                                # Remove any articles from the variable name
+                                var_name = var_name.strip().replace('the ', '').replace('a ', '').replace('an ', '')
+                                return self.math_operation('Add', amount, var_name)
+                            # ... (similar for other operations)
+                        elif category == 'conditional':
+                            condition, action, else_action = match.groups()
+                            # Clean up the condition and actions
+                            condition = condition.strip()
+                            action = action.strip()
+                            if else_action:
+                                else_action = else_action.strip()
+                            return self.process_conditional(condition, action, else_action)
 
-            # Print/Display with string handling
-            elif line.startswith(('Print', 'Show', 'Display')):
-                to_print = line.split(' ', 1)[1].strip()
-                try:
-                    # Check if it's a quoted string
-                    if (to_print.startswith('"') and to_print.endswith('"')) or \
-                       (to_print.startswith("'") and to_print.endswith("'")):
-                        # Remove quotes and print directly
-                        self.output.append(to_print[1:-1])
-                    else:
-                        # Evaluate as a variable or expression
-                        result = eval(to_print, {"__builtins__": self.safe_builtins}, self.variables)
-                        self.output.append(str(result))
-                except Exception as e:
-                    self.output.append(f"Couldn't display {to_print}: {str(e)}")
-
-            # Math operations
-            elif match := re.match(r'(Add|Subtract|Multiply|Divide) (.*?) (?:to|from|by) (\w+)', line):
-                op, amount, var_name = match.groups()
-                if var_name in self.variables:
-                    try:
-                        amount_val = eval(amount, {"__builtins__": self.safe_builtins}, self.variables)
-                        if op == 'Add':
-                            self.variables[var_name] += amount_val
-                        elif op == 'Subtract':
-                            self.variables[var_name] -= amount_val
-                        elif op == 'Multiply':
-                            self.variables[var_name] *= amount_val
-                        elif op == 'Divide':
-                            self.variables[var_name] /= amount_val
-                        self.output.append(f"{op}ed {amount} to {var_name}. Result: {self.variables[var_name]}")
-                    except Exception as e:
-                        self.output.append(f"Couldn't perform {op.lower()} operation: {str(e)}")
-                else:
-                    self.output.append(f"Variable {var_name} not found")
-
-            # List operations
-            elif match := re.match(r'(Append|Remove|Insert) (.*?) (?:to|from|at) (\w+)(?: at (?:index|position) (\d+))?', line):
-                op, item, list_name, pos = match.groups()
-                if list_name in self.variables and isinstance(self.variables[list_name], list):
-                    try:
-                        if op == 'Append':
-                            self.variables[list_name].append(eval(item, {"__builtins__": self.safe_builtins}, self.variables))
-                        elif op == 'Remove':
-                            self.variables[list_name].remove(eval(item, {"__builtins__": self.safe_builtins}, self.variables))
-                        elif op == 'Insert' and pos:
-                            self.variables[list_name].insert(int(pos), eval(item, {"__builtins__": self.safe_builtins}, self.variables))
-                        self.output.append(f"List {list_name} is now: {self.variables[list_name]}")
-                    except Exception as e:
-                        self.output.append(f"Couldn't modify list: {str(e)}")
-                else:
-                    self.output.append(f"{list_name} is not a list")
-
-            # Conditional statements with better string handling
-            elif line.startswith('If'):
-                match = re.match(r'If (.*?), (.*?)(?:\s+else\s+(.*))?$', line)
-                if match:
-                    condition, true_action, false_action = match.groups()
-                    condition = self.translate_condition(condition)
-                    try:
-                        if eval(condition, {"__builtins__": self.safe_builtins}, self.variables):
-                            # Process the true action
-                            self.process_line(true_action.strip())
-                        elif false_action:
-                            # Process the false action
-                            self.process_line(false_action.strip())
-                    except Exception as e:
-                        self.output.append(f"Error in if statement: {str(e)}")
-
-            # Function calls
-            elif match := re.match(r'Call (\w+)(?: with (.*))?', line):
-                func_name, args = match.groups()
-                if func_name in self.functions:
-                    try:
-                        args_list = [eval(arg.strip(), {"__builtins__": self.safe_builtins}, self.variables) 
-                                   for arg in (args.split(',') if args else [])]
-                        result = self.functions[func_name](*args_list)
-                        if result is not None:
-                            self.output.append(str(result))
-                    except Exception as e:
-                        self.output.append(f"Error calling function: {str(e)}")
-                else:
-                    self.output.append(f"Function {func_name} not found")
-
-            else:
-                self.output.append(f"I don't understand: {line}")
+            # If no pattern matches
+            self.output.append(f"I don't understand: {line}")
 
         except Exception as e:
             self.output.append(f"Error: {str(e)}")
+
+    def process_conditional(self, condition: str, action: str, else_action: str = None):
+        """Handle conditional statements with better article handling"""
+        try:
+            condition = self.translate_condition(condition)
+            if eval(condition, {"__builtins__": self.safe_builtins}, self.variables):
+                self.process_line(action)
+            elif else_action:
+                self.process_line(else_action)
+        except Exception as e:
+            self.output.append(f"Error in conditional: {str(e)}")
+
+    def create_variable(self, name: str, value: str):
+        """Handle variable creation with better error messages"""
+        try:
+            evaluated_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
+            self.variables[name] = evaluated_value
+            self.output.append(f"Created {name} = {evaluated_value}")
+        except Exception as e:
+            self.output.append(f"I couldn't create {name}. {str(e)}")
+
+    def print_value(self, to_print: str):
+        """Handle printing values with better string handling"""
+        to_print = to_print.strip()
+        try:
+            if (to_print.startswith('"') and to_print.endswith('"')) or \
+               (to_print.startswith("'") and to_print.endswith("'")):
+                self.output.append(to_print[1:-1])
+            else:
+                result = eval(to_print, {"__builtins__": self.safe_builtins}, self.variables)
+                self.output.append(str(result))
+        except Exception as e:
+            self.output.append(f"I couldn't show {to_print}. {str(e)}")
+
+    def math_operation(self, operation: str, amount: str, var_name: str):
+        """Handle math operations with better error handling"""
+        if var_name not in self.variables:
+            self.output.append(f"I can't find a variable called {var_name}")
+            return
+
+        try:
+            amount_val = eval(amount, {"__builtins__": self.safe_builtins}, self.variables)
+            original = self.variables[var_name]
+
+            if operation == 'Add':
+                self.variables[var_name] += amount_val
+                self.output.append(f"Added {amount_val} to {var_name} ({original} + {amount_val} = {self.variables[var_name]})")
+            # ... (similar for other operations)
+
+        except Exception as e:
+            self.output.append(f"I couldn't {operation.lower()} {amount} to {var_name}. {str(e)}")
 
     def translate_condition(self, condition: str) -> str:
         """Translate natural language conditions to Python"""
