@@ -67,6 +67,85 @@ class AdvancedInterpreter:
                 r'(?:Generate|Create|Give me|Get|Make)(?: a)? random number',
                 r'(?:Find|Get|Calculate|What is)(?: the)? (?:maximum|max|highest|biggest) (?:value )?(?:of|in|from) (.*)',
             ],
+            'data_types': [
+                # Type conversion
+                r'(?:Convert|Change|Transform|Make) (.*?) (?:to|into|as)(?: a| an)? (string|int|float|bool|list|tuple|set|dict)',
+                r'(?:Get|Show|Tell me)(?: the)? type of (.*)',
+            ],
+            'string_ops': [
+                # String operations
+                r'(?:Join|Combine|Concatenate) (.*?) (?:and|with) (.*)',
+                r'(?:Split|Break|Divide) (.*?) (?:by|at|on) (.*)',
+                r'(?:Make|Convert)(?: the)? (.*?) (?:uppercase|lowercase|capital|title case)',
+                r'(?:Count|Find|Get)(?: the)? (?:number of|occurrences of) (.*?) in (.*)',
+            ],
+            'collections': [
+                # List/Set/Dict operations
+                r'(?:Create|Make|Define)(?: a| an)? (list|set|dict|tuple) (?:called|named) (\w+)(?: with)? (.*)',
+                r'(?:Get|Find|Show)(?: the)? (length|size|count) of (.*)',
+                r'(?:Sort|Order|Arrange) (.*?) (?:in)? (ascending|descending) order',
+                r'(?:Reverse|Flip|Invert) (?:the list|the array|the sequence)? (.*)',
+            ],
+            'loops': [
+                # For loops
+                r'(?:For|For each|Loop through) (.*?) in (.*?):',
+                r'(?:Repeat|Do|Execute) (.*?) times:',
+                # While loops
+                r'(?:While|As long as|Until) (.*?):',
+                r'(?:Keep|Continue) (?:going|running|executing) (?:while|as long as) (.*?):',
+            ],
+            'functions': [
+                # Function definition
+                r'(?:Define|Create|Make)(?: a)? function (?:called |named )?(\w+)(?:\((.*?)\))?(?: that| to| which)? (.*?):',
+                r'(?:Call|Run|Execute|Use)(?: the)? function (\w+)(?: with)? (.*)',
+                # Lambda functions
+                r'(?:Create|Make|Define)(?: a)? quick function (?:that|to) (.*)',
+            ],
+            'classes': [
+                # Class definition and inheritance
+                r'(?:Create|Define|Make)(?: a)? class (?:called |named )?(\w+)(?:(?: that)? inherits from| extends) (.*?):',
+                r'(?:Create|Define|Make)(?: a)? class (?:called |named )?(\w+):',
+                # Object creation
+                r'(?:Create|Make|Instantiate)(?: a| an)? (\w+) object (?:called |named )?(\w+)(?: with)? (.*)',
+            ],
+            'error_handling': [
+                # Try-except blocks
+                r'(?:Try|Attempt)(?: to)? (.*?)(?:: or| otherwise| if it fails,) (.*)',
+                r'(?:Handle|Catch)(?: the)? error(?:s)?(?: when| if) (.*)',
+            ],
+            'file_ops': [
+                # File operations
+                r'(?:Read|Open|Load)(?: the)? file (?:called |named )?(.*)',
+                r'(?:Write|Save|Store) (.*?) (?:to|in)(?: the)? file (?:called |named )?(.*)',
+                r'(?:Append|Add) (.*?) (?:to|in)(?: the)? file (?:called |named )?(.*)',
+            ],
+            'modules': [
+                # Module operations
+                r'(?:Import|Use|Include)(?: the)? module (?:called |named )?(.*)',
+                r'(?:Import|Use|Include) (.*?) from (?:the )?module (.*)',
+            ],
+            'datetime_ops': [
+                # Date and time operations
+                r'(?:Get|Show|Display)(?: the)? current (?:date|time|datetime)',
+                r'(?:Format|Convert)(?: the)? date (.*?) (?:to|as) (.*)',
+            ],
+            'math_extended': [
+                # Extended math operations
+                r'(?:Calculate|Compute|Find)(?: the)? (sin|cos|tan|log|exp) of (.*)',
+                r'(?:Round|Floor|Ceil) (?:the )?(?:number )?(.*)',
+                r'(?:Get|Find|Calculate)(?: the)? (absolute|factorial|power) of (.*)',
+            ],
+        }
+
+        # Add more translations for conditions
+        self.condition_translations = {
+            'is between': 'lambda x: {min} <= x <= {max}',
+            'contains': 'in',
+            'starts with': 'startswith',
+            'ends with': 'endswith',
+            'matches': 'match',
+            'is empty': 'not',
+            'has length': 'len',
         }
 
     def _init_builtins(self):
@@ -176,8 +255,10 @@ class AdvancedInterpreter:
             
             # Process the amount with better numeric handling
             try:
-                # Handle numeric literals first
-                if str(amount).replace('.', '', 1).isdigit():
+                # Handle numeric literals first - improved handling
+                if isinstance(amount, (int, float)):
+                    amount_val = float(amount)
+                elif str(amount).replace('.', '', 1).isdigit():
                     amount_val = float(amount)
                 # Then handle variable references
                 elif amount in self.variables:
@@ -185,7 +266,10 @@ class AdvancedInterpreter:
                 # Finally try evaluation with stripped quotes
                 else:
                     clean_amount = amount.strip('"\'')
-                    amount_val = float(clean_amount)
+                    try:
+                        amount_val = float(eval(clean_amount, {"__builtins__": self.safe_builtins}, self.variables))
+                    except:
+                        amount_val = float(clean_amount)
 
                 # Perform the operation with improved error handling
                 operations = {
@@ -200,17 +284,28 @@ class AdvancedInterpreter:
                 }
 
                 if operation in operations:
-                    result = operations[operation](float(original), amount_val)
-                    if result is not None:
-                        self.variables[var_name] = result
-                        self.output.append(f"Updated {var_name} from {original} to {result}")
-                    else:
-                        self.output.append(f"Cannot divide by zero")
+                    try:
+                        # Convert original to float if it's a number
+                        orig_val = float(original) if isinstance(original, (int, str)) else original
+                        result = operations[operation](orig_val, amount_val)
+                        if result is not None:
+                            self.variables[var_name] = result
+                            self.output.append(f"Updated {var_name} from {original} to {result}")
+                        else:
+                            self.output.append(f"Cannot divide by zero")
+                    except ValueError:
+                        # Handle string concatenation for Add operation
+                        if operation == 'Add' and isinstance(original, str):
+                            result = str(original) + str(amount_val)
+                            self.variables[var_name] = result
+                            self.output.append(f"Updated {var_name} from {original} to {result}")
+                        else:
+                            self.output.append(f"Cannot perform {operation} on {var_name}")
                 else:
                     self.output.append(f"Unknown operation: {operation}")
 
-            except ValueError:
-                self.output.append(f"Cannot convert {amount} to a number")
+            except ValueError as ve:
+                self.output.append(f"Cannot convert {amount} to a number: {str(ve)}")
             except Exception as e:
                 self.output.append(f"Error in math operation: {str(e)}")
 
@@ -360,6 +455,53 @@ class AdvancedInterpreter:
         condition = ' '.join(condition.split())
         
         return condition
+
+    def process_function(self, name: str, params: str, body: List[str]):
+        """Handle function definition and execution"""
+        try:
+            # Clean parameters
+            params = [p.strip() for p in params.split(',') if p.strip()]
+            
+            # Create function body
+            func_body = []
+            for line in body:
+                processed_line = self.process_line(line)
+                if processed_line:
+                    func_body.append(processed_line)
+
+            # Store function
+            self.functions[name] = {
+                'params': params,
+                'body': func_body
+            }
+            self.output.append(f"Created function {name}")
+
+        except Exception as e:
+            self.output.append(f"Error creating function: {str(e)}")
+
+    def process_class(self, name: str, parent: str = None, body: List[str] = None):
+        """Handle class definition and inheritance"""
+        try:
+            class_dict = {'methods': {}, 'parent': parent}
+            
+            if body:
+                for line in body:
+                    if line.strip().startswith('Define function'):
+                        # Process method definition
+                        method_match = re.match(r'Define function (\w+)\((.*?)\):(.*)', line)
+                        if method_match:
+                            method_name, params, method_body = method_match.groups()
+                            class_dict['methods'][method_name] = {
+                                'params': params.split(','),
+                                'body': method_body
+                            }
+
+            self.classes[name] = class_dict
+            self.output.append(f"Created class {name}" + 
+                             (f" inheriting from {parent}" if parent else ""))
+
+        except Exception as e:
+            self.output.append(f"Error creating class: {str(e)}")
 
 # Create Flask app
 app = Flask(__name__)
