@@ -230,11 +230,19 @@ class AdvancedInterpreter:
         """Handle printing values with better string handling"""
         to_print = to_print.strip()
         try:
+            # Handle string literals
             if (to_print.startswith('"') and to_print.endswith('"')) or \
                (to_print.startswith("'") and to_print.endswith("'")):
                 self.output.append(to_print[1:-1])
+            # Handle math functions
+            elif to_print == 'pi':
+                self.output.append(str(self.safe_builtins['math']['pi']))
+            # Handle variables and expressions
             else:
-                result = eval(to_print, {"__builtins__": self.safe_builtins}, self.variables)
+                if to_print in self.variables:
+                    result = self.variables[to_print]
+                else:
+                    result = eval(to_print, {"__builtins__": self.safe_builtins}, self.variables)
                 self.output.append(str(result))
         except Exception as e:
             self.output.append(f"I couldn't show {to_print}. {str(e)}")
@@ -248,24 +256,20 @@ class AdvancedInterpreter:
 
             original = self.variables[var_name]
             
-            # Process the amount first
+            # Process the amount
             try:
-                # Handle variable reference first
-                if amount in self.variables:
-                    amount_val = self.variables[amount]
-                # Then try direct conversion for numeric literals
-                elif str(amount).replace('.', '', 1).isdigit():
+                # Handle numeric literals first
+                if str(amount).replace('.', '', 1).isdigit():
                     amount_val = float(amount)
+                # Then handle variable references
+                elif amount in self.variables:
+                    amount_val = float(self.variables[amount])
                 # Finally try evaluation with stripped quotes
                 else:
-                    clean_amount = amount.strip('"\'') if isinstance(amount, str) else amount
-                    try:
-                        amount_val = float(clean_amount)
-                    except ValueError:
-                        self.output.append(f"Cannot convert {amount} to a number")
-                        return
+                    clean_amount = amount.strip('"\'')
+                    amount_val = float(clean_amount)
 
-                # Rest of the function remains the same
+                # Perform the operation
                 operations = {
                     'Add': lambda x, y: x + y,
                     'Subtract': lambda x, y: x - y,
@@ -287,6 +291,8 @@ class AdvancedInterpreter:
                 else:
                     self.output.append(f"Unknown operation: {operation}")
 
+            except ValueError:
+                self.output.append(f"Cannot convert {amount} to a number")
             except Exception as e:
                 self.output.append(f"Error in math operation: {str(e)}")
 
@@ -354,20 +360,20 @@ class AdvancedInterpreter:
         try:
             if func == 'sqrt':
                 try:
-                    # Handle variable reference first
-                    if args[0] in self.variables:
-                        num = float(self.variables[args[0]])
-                    # Then try direct conversion
-                    elif str(args[0]).replace('.', '', 1).isdigit():
+                    # Handle numeric literals first
+                    if str(args[0]).replace('.', '', 1).isdigit():
                         num = float(args[0])
+                    # Then handle variable references
+                    elif args[0] in self.variables:
+                        num = float(self.variables[args[0]])
                     # Finally try evaluation
                     else:
-                        clean_arg = args[0].strip('"\'') if isinstance(args[0], str) else args[0]
+                        clean_arg = args[0].strip('"\'')
                         num = float(eval(clean_arg, {"__builtins__": self.safe_builtins}, self.variables))
                     result = math.sqrt(num)
                     self.output.append(f"Square root of {num} is {result}")
-                except:
-                    self.output.append(f"Cannot calculate square root of {args[0]}")
+                except Exception as e:
+                    self.output.append(f"Cannot calculate square root of {args[0]}: {str(e)}")
             elif func == 'pi':
                 self.output.append(str(self.safe_builtins['math']['pi']))
             elif func == 'random':
