@@ -240,13 +240,24 @@ class AdvancedInterpreter:
             self.output.append(f"I couldn't show {to_print}. {str(e)}")
 
     def math_operation(self, operation: str, amount: str, var_name: str):
-        """Handle math operations with better error handling"""
+        """Handle math operations with better string handling"""
         try:
             if var_name not in self.variables:
                 self.output.append(f"I can't find a variable called {var_name}")
                 return
 
-            # Handle numeric literals and variable references
+            original = self.variables[var_name]
+            
+            # Handle string concatenation separately
+            if isinstance(original, str) and operation == 'Add':
+                # Remove quotes if present
+                amount_val = amount.strip('"\'')
+                result = original + amount_val
+                self.variables[var_name] = result
+                self.output.append(f"Added to {var_name} ({original} -> {result})")
+                return
+
+            # Handle numeric operations
             try:
                 if isinstance(amount, str):
                     if amount.isdigit() or (amount.replace('.', '', 1).isdigit() and amount.count('.') < 2):
@@ -254,11 +265,8 @@ class AdvancedInterpreter:
                     else:
                         amount_val = float(eval(amount, {"__builtins__": self.safe_builtins}, self.variables))
             except:
-                self.output.append(f"Invalid amount: {amount}")
+                self.output.append(f"Invalid numeric value: {amount}")
                 return
-
-            original = self.variables[var_name]
-            result = None
 
             operations = {
                 'Add': lambda x, y: x + y if isinstance(x, (int, float)) else None,
@@ -341,15 +349,18 @@ class AdvancedInterpreter:
         return condition
 
     def math_function(self, func: str, *args):
-        """Handle math functions"""
+        """Handle math functions with better error handling"""
         try:
             if func == 'sqrt':
                 try:
-                    num = float(args[0].strip('"\''))
+                    if args[0].isdigit():
+                        num = float(args[0])
+                    else:
+                        num = float(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
+                    result = math.sqrt(num)
+                    self.output.append(f"The square root of {num} is {result}")
                 except:
-                    num = float(eval(args[0], {"__builtins__": self.safe_builtins}, self.variables))
-                result = math.sqrt(num)
-                self.output.append(f"The square root of {num} is {result}")
+                    self.output.append(f"Invalid number for square root: {args[0]}")
             elif func == 'pi':
                 self.output.append(f"The value of pi is {math.pi}")
             elif func == 'random':
@@ -363,9 +374,9 @@ class AdvancedInterpreter:
                     
                     if isinstance(values, (list, tuple)):
                         result = max(values)
-                        self.output.append(f"The maximum value is {result}")
+                        self.output.append(f"The maximum value in {args[0]} is {result}")
                     else:
-                        self.output.append(f"Cannot find maximum: value is not a list or tuple")
+                        self.output.append(f"Cannot find maximum: {args[0]} is not a list or tuple")
                 except Exception as e:
                     self.output.append(f"Cannot evaluate maximum: {str(e)}")
 
@@ -373,7 +384,7 @@ class AdvancedInterpreter:
             self.output.append(f"Error in math function {func}: {str(e)}")
 
     def list_operation(self, operation: str, value: str, list_name: str, position: int = None):
-        """Handle list operations"""
+        """Handle list operations with better value handling"""
         try:
             if list_name not in self.variables:
                 self.output.append(f"I can't find a list called {list_name}")
@@ -383,8 +394,17 @@ class AdvancedInterpreter:
                 self.output.append(f"{list_name} is not a list")
                 return
 
-            # Handle string literals
-            processed_value = value.strip('"\'')  # Remove quotes if present
+            # Handle string literals and variable references
+            try:
+                if value.startswith('"') or value.startswith("'"):
+                    processed_value = value.strip('"\'')
+                elif value in self.variables:
+                    processed_value = self.variables[value]
+                else:
+                    processed_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
+            except:
+                self.output.append(f"Invalid value: {value}")
+                return
 
             if operation == 'Add':
                 self.variables[list_name].append(processed_value)
