@@ -26,45 +26,51 @@ class AdvancedInterpreter:
         self._init_extended_builtins()
 
         # Define command patterns for various operations
+        # Order is important: more specific patterns should come first to avoid overlaps
         self.command_patterns = {
+            'conditional_logic': [
+                r'If (.*):',  # Conditional statements
+            ],
             'create_var': [
                 # Patterns for creating variables
-                r'(?:Make|Create|Set|Let|Define|Give me) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value|that is) (.*)',
-                r'(?:Let|Set) (\w+) (?:be|equal|to) (.*)',
+                r'(?:Make|Create|Set|Let|Define|Give me) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value|that is) (.+)',
+                r'(?:Let|Set) (\w+) (?:be|equal|to) (.+)',
             ],
-            'print': [
-                # Patterns for printing variables or strings
-                r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
-                r'(?:Print|Show|Display|Output|Say) ["\'](.+)["\']',
+            'list_ops': [
+                # Patterns for list operations
+                r'(?:Add|Append) (\d+) to (\w+)',
+                r'(?:Remove) (\d+) from (\w+)',
+                r'(?:Sort) (\w+)',
             ],
             'math_ops': [
                 # Patterns for basic math operations
                 r'(?:Add|Plus|Increase) (.*?) (?:to|into) (\w+)',
                 r'(?:Subtract|Minus|Decrease) (.*?) from (\w+)',
-                r'(?:Multiply|Times) (\w+) by (.*)',
-                r'(?:Divide) (\w+) by (.*)',
+                r'(?:Multiply|Times) (\w+) by (.+)',
+                r'(?:Divide) (\w+) by (.+)',
                 r'(?:Double) (\w+)',
+                r'(?:Half) (\w+)',
+            ],
+            'string_format': [
+                # Patterns for string formatting
+                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
+            ],
+            'math_funcs': [
+                # Patterns for advanced math functions
+                r'(?:Calculate|Compute|Find) (?:the )?(?:square root|sqrt) of (\d+)',
+                r'(?:Find|Get|Calculate) (?:the )?(?:maximum|min) of (\w+)',
+                r'(?:Generate|Create) (?:a )?random number between (\d+) and (\d+)',
             ],
             'string_ops': [
                 # Patterns for string operations
                 r'Convert (\w+) to (uppercase|lowercase)',
                 r'Join (\w+) with ["\'](.+)["\']',
             ],
-            'list_ops': [
-                # Patterns for list operations
-                r'Add (\d+) to (\w+)',
-                r'Remove (\d+) from (\w+)',
-                r'Sort (\w+)',
-            ],
-            'math_funcs': [
-                # Patterns for advanced math functions
-                r'Calculate square root of (\d+)',
-                r'Find maximum of (\w+)',
-                r'Generate random number between (\d+) and (\d+)',
-            ],
-            'string_format': [
-                # Patterns for string formatting
-                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
+            'print': [
+                # Patterns for printing variables or strings
+                r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
+                r'(?:Print|Show|Display|Output|Say) ["\'](.+)["\']',
+                r'(?:What is|Tell me|Show me)(?: the)? (?:value of )?(.+)',
             ],
         }
 
@@ -143,12 +149,13 @@ class AdvancedInterpreter:
                                 return self.list_operation(operation, value, var_name)
                         
                         elif category == 'math_funcs':
-                            if 'square root' in pattern:
+                            if 'square root' in pattern or 'sqrt' in pattern:
                                 number = match.group(1)
                                 return self.math_function('sqrt', number)
-                            elif 'maximum' in pattern:
+                            elif 'maximum' in pattern or 'min' in pattern:
                                 var_name = match.group(1)
-                                return self.math_function('max', var_name)
+                                func_type = 'max' if 'max' in pattern else 'min'
+                                return self.math_function(func_type, var_name)
                             else:
                                 start, end = match.groups()
                                 return self.math_function('random', f"{start},{end}")
@@ -291,71 +298,94 @@ class AdvancedInterpreter:
             self.output.append(f"Error printing value: {str(e)}")
             logger.error(f"Error in print_value: {str(e)}")
 
-    def math_operation(self, operation: str, amount: str, var_name: str):
-        """Handle basic math operations"""
+    def math_operation(self, operation: str, amount: Any, var_name: str):
+        """Handle basic math operations like add, subtract, multiply, divide, double, half"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"Variable '{var_name}' not found")
+                self.output.append(f"I can't find a variable called {var_name}")
+                logger.error(f"Variable '{var_name}' not found among variables: {list(self.variables.keys())}")
                 return
 
             original = self.variables[var_name]
+            logger.debug(f"Original value of '{var_name}': {original} (type: {type(original)})")
             
-            # Handle the 'double' operation separately
-            if operation == 'double':
+            # Handle the 'double' and 'half' operations separately
+            if operation in ['double', 'half']:
                 if not isinstance(original, (int, float)):
-                    self.output.append(f"Cannot double '{var_name}' - not a number")
+                    self.output.append(f"Cannot perform '{operation}' on non-numeric variable '{var_name}'")
+                    logger.error(f"Variable '{var_name}' is not numeric for operation '{operation}'")
                     return
-                result = original * 2
+
+                if operation == 'double':
+                    result = original * 2
+                elif operation == 'half':
+                    result = original / 2
+
                 self.variables[var_name] = result
                 self.output.append(f"Updated {var_name} from {original} to {result}")
+                logger.info(f"Performed '{operation}' on '{var_name}': {original} -> {result}")
                 return
 
-            # For other operations, parse the amount
-            try:
-                amount_val = float(amount) if self.is_number(amount) else self.variables[amount]
-            except:
-                self.output.append(f"Invalid amount: {amount}")
+            # For other operations, ensure the original value is numeric
+            if not isinstance(original, (int, float)):
+                self.output.append(f"Cannot perform '{operation}' on non-numeric variable '{var_name}'")
+                logger.error(f"Variable '{var_name}' is not numeric for operation '{operation}'")
                 return
 
-            if isinstance(original, (int, float)):
-                if operation == 'add':
-                    result = original + amount_val
-                elif operation == 'subtract':
-                    result = original - amount_val
-                elif operation == 'multiply':
-                    result = original * amount_val
-                elif operation == 'divide':
-                    if amount_val == 0:
-                        self.output.append("Cannot divide by zero")
-                        return
-                    result = original / amount_val
-            elif isinstance(original, list):
-                if operation == 'add':
-                    result = original + [amount_val]  # Add as list element
+            # Determine the amount value
+            if isinstance(amount, str):
+                if amount in self.variables:
+                    amount_val = self.variables[amount]
+                elif self.is_number(amount):
+                    amount_val = float(amount)
                 else:
-                    self.output.append(f"Operation '{operation}' not supported for lists")
+                    self.output.append(f"I can't find a variable called {amount}")
+                    logger.error(f"Amount '{amount}' is not a number or variable")
                     return
             else:
-                self.output.append(f"Cannot perform '{operation}' on type {type(original)}")
-                return
+                amount_val = float(amount)
+
+            original = self.variables[var_name]
+            result = None
+
+            if operation == 'add':
+                result = original + amount_val
+            elif operation == 'subtract':
+                result = original - amount_val
+            elif operation == 'multiply':
+                result = original * amount_val
+            elif operation == 'divide':
+                if amount_val == 0:
+                    self.output.append("Cannot divide by zero")
+                    logger.error("Division by zero attempted")
+                    return
+                result = original / amount_val
 
             self.variables[var_name] = result
             self.output.append(f"Updated {var_name} from {original} to {result}")
+            logger.info(f"Performed '{operation}' on '{var_name}': {original} -> {result}")
 
         except Exception as e:
+            # Log and append any unexpected errors during math operations
+            error_msg = f"Error in math operation: {str(e)}"
+            stack_trace = traceback.format_exc()
+            logger.error(f"{error_msg}\n{stack_trace}")
             self.output.append(f"Error in math operation: {str(e)}")
-            logger.error(f"Error in math_operation: {str(e)}")
 
     def string_operation(self, var_name: str, operation: str):
-        """Handle string operations"""
+        """Handle string operations like converting to uppercase or lowercase"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"String '{var_name}' not found")
+                self.output.append(f"I can't find a string called {var_name}")
+                logger.error(f"String '{var_name}' not found among variables: {list(self.variables.keys())}")
                 return
 
             value = self.variables[var_name]
+            logger.debug(f"Original value of '{var_name}': {value} (type: {type(value)})")
+            
             if not isinstance(value, str):
                 self.output.append(f"'{var_name}' is not a string")
+                logger.error(f"Variable '{var_name}' is not a string for string operation")
                 return
 
             if operation.lower() == 'uppercase':
@@ -364,80 +394,106 @@ class AdvancedInterpreter:
                 result = value.lower()
             else:
                 self.output.append(f"Unknown string operation: {operation}")
+                logger.error(f"Unknown string operation '{operation}'")
                 return
 
             self.variables[var_name] = result
-            self.output.append(f"Updated {var_name} = {result}")
+            self.output.append(f"Converted {var_name} to {operation}: {result}")
+            logger.info(f"Performed '{operation}' on '{var_name}': {value} -> {result}")
 
         except Exception as e:
+            # Log and append any errors encountered during string operations
             self.output.append(f"Error in string operation: {str(e)}")
             logger.error(f"Error in string_operation: {str(e)}")
 
     def string_join(self, var_name: str, text: str):
-        """Handle string joining"""
+        """Handle joining a string with another string"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"String '{var_name}' not found")
+                self.output.append(f"I can't find a string called {var_name}")
+                logger.error(f"String '{var_name}' not found among variables: {list(self.variables.keys())}")
                 return
 
             value = self.variables[var_name]
+            logger.debug(f"Original value of '{var_name}': {value} (type: {type(value)})")
+            
             if not isinstance(value, str):
                 self.output.append(f"'{var_name}' is not a string")
+                logger.error(f"Variable '{var_name}' is not a string for string joining")
                 return
 
+            # Remove surrounding quotes if present
             text = text.strip('"\'')
             result = value + text
             self.variables[var_name] = result
-            self.output.append(f"Updated {var_name} = {result}")
+            self.output.append(f"Joined {var_name} with \"{text}\": {result}")
+            logger.info(f"Joined '{var_name}' with \"{text}\": {result}")
 
         except Exception as e:
+            # Log and append any errors encountered during string joining
             self.output.append(f"Error in string join: {str(e)}")
             logger.error(f"Error in string_join: {str(e)}")
 
-    def list_operation(self, operation: str, value: str, var_name: str):
-        """Handle list operations"""
+    def list_operation(self, operation: str, value: Any, var_name: str):
+        """Handle list operations like add, remove, sort"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"List '{var_name}' not found")
+                self.output.append(f"I can't find a list called {var_name}")
+                logger.error(f"List '{var_name}' not found among variables: {list(self.variables.keys())}")
                 return
 
             lst = self.variables[var_name]
+            logger.debug(f"Original list '{var_name}': {lst} (type: {type(lst)})")
+            
             if not isinstance(lst, list):
                 self.output.append(f"'{var_name}' is not a list")
+                logger.error(f"Variable '{var_name}' is not a list for list operation")
                 return
 
-            if operation == 'add':
+            if operation == 'add' or operation == 'append':
                 try:
                     element = int(value)
-                    lst.append(element)
-                    self.output.append(f"Added {element} to {var_name}")
                 except ValueError:
-                    self.output.append(f"Invalid number: {value}")
+                    element = value.strip('"\'')
+                lst.append(element)
+                self.output.append(f"Added {element} to {var_name}: {lst}")
+                logger.info(f"Added {element} to list '{var_name}': {lst}")
+
             elif operation == 'remove':
                 try:
                     element = int(value)
-                    if element in lst:
-                        lst.remove(element)
-                        self.output.append(f"Removed {element} from {var_name}")
-                    else:
-                        self.output.append(f"{element} not found in {var_name}")
                 except ValueError:
-                    self.output.append(f"Invalid number: {value}")
+                    element = value.strip('"\'')
+                if element in lst:
+                    lst.remove(element)
+                    self.output.append(f"Removed {element} from {var_name}: {lst}")
+                    logger.info(f"Removed {element} from list '{var_name}': {lst}")
+                else:
+                    self.output.append(f"{element} not found in {var_name}")
+                    logger.warning(f"Element '{element}' not found in list '{var_name}' for removal")
+
             elif operation == 'sort':
                 try:
                     lst.sort()
-                    self.output.append(f"Sorted {var_name}")
+                    self.output.append(f"Sorted {var_name}: {lst}")
+                    logger.info(f"Sorted list '{var_name}': {lst}")
                 except TypeError:
-                    self.output.append(f"Cannot sort {var_name} - incompatible types")
+                    self.output.append(f"Cannot sort {var_name} due to incompatible types")
+                    logger.error(f"TypeError when trying to sort list '{var_name}'")
+
+            else:
+                self.output.append(f"Unknown list operation: {operation}")
+                logger.error(f"Unknown list operation '{operation}'")
+                return
 
             self.variables[var_name] = lst
-            self.output.append(f"Current {var_name} = {lst}")
 
         except Exception as e:
+            # Log and append any unexpected errors during list operations
             self.output.append(f"Error in list operation: {str(e)}")
             logger.error(f"Error in list_operation: {str(e)}")
 
-    def math_function(self, func: str, value: str):
+    def math_function(self, func: str, value: Any):
         """Handle advanced math functions like square root, maximum, and random number generation"""
         try:
             func = func.lower()
@@ -479,7 +535,7 @@ class AdvancedInterpreter:
         except Exception as e:
             # Log and append any errors encountered during string formatting
             self.output.append(f"Error formatting string: {str(e)}")
-            logger.error(f"Error in format_string method: {str(e)}")
+            logger.error(f"Error in string_format method: {str(e)}")
 
     def _clean_variable_name(self, name: str) -> str:
         """Clean and validate variable name"""
