@@ -25,8 +25,7 @@ class AdvancedInterpreter:
         # Initialize safe built-in functions
         self._init_extended_builtins()
 
-        # Define command patterns for various operations
-        # Order is important: more specific patterns should come first to avoid overlaps
+        # Updated command patterns to better handle all cases
         self.command_patterns = {
             'create_var': [
                 r'(?:Make|Create|Set|Let|Define|Give me) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value|that is) (.*)',
@@ -34,6 +33,7 @@ class AdvancedInterpreter:
             ],
             'print': [
                 r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
+                r'(?:Print|Show|Display|Output|Say) ["\'](.+?)["\']',  # Added for direct string printing
             ],
             'math_ops': [
                 r'(?:Add|Plus|Increase) (\d+(?:\.\d+)?|\w+) (?:to|into) (\w+)',
@@ -43,7 +43,7 @@ class AdvancedInterpreter:
             ],
             'string_ops': [
                 r'Convert (\w+) to (uppercase|lowercase)',
-                r'Join (\w+) with (?:["\'])(.+?)(?:["\'])',
+                r'Join (\w+) with ["\'](.+?)["\']',  # Fixed quote handling
             ],
             'list_ops': [
                 r'(?:Add|Append) (\d+|\w+|(?:["\']).*?(?:["\'])) to (\w+)',
@@ -56,7 +56,7 @@ class AdvancedInterpreter:
                 r'Generate(?: a)? random number between (\d+)(?:,| and )(\d+)',
             ],
             'string_format': [
-                r'Format string (?:["\'])(.+?)(?:["\']) with (?:["\'])(.+?)(?:["\'])',
+                r'Format string ["\'](.+?)["\'] with ["\'](.+?)["\']',  # Fixed quote handling
             ],
             'conditional': [
                 r'If (.*?) is (bigger than|less than|equal to) (\d+):',
@@ -89,6 +89,13 @@ class AdvancedInterpreter:
             line = line.strip()
             logger.info(f"Processing line: {line}")
             
+            # Handle direct string printing first
+            if line.startswith(('Print', 'Show', 'Display', 'Output', 'Say')) and ('"' in line or "'" in line):
+                match = re.match(r'(?:Print|Show|Display|Output|Say) ["\'](.+?)["\']', line)
+                if match:
+                    self.output.append(match.group(1))
+                    return
+
             for category, patterns in self.command_patterns.items():
                 for pattern in patterns:
                     match = re.match(pattern, line, re.IGNORECASE)
@@ -98,19 +105,23 @@ class AdvancedInterpreter:
                             name, value = match.groups()
                             return self.create_variable(name, value)
                         elif category == 'print':
-                            var_name = match.group(1)
+                            var_name = match.group(1).strip()
                             return self.print_value(var_name)
                         elif category == 'math_ops':
                             if 'Double' in pattern:
                                 var_name = match.group(1)
-                                return self.math_operation('double', None, var_name)
+                                return self.math_operation('double', 2, var_name)
                             else:
                                 amount, var_name = match.groups()
                                 operation = self._determine_math_operation(line)
                                 return self.math_operation(operation, amount, var_name)
                         elif category == 'string_ops':
-                            var_name, operation = match.groups()
-                            return self.string_operation(var_name, operation)
+                            if 'Convert' in line:
+                                var_name, operation = match.groups()
+                                return self.string_operation(var_name, operation)
+                            elif 'Join' in line:
+                                var_name, text = match.groups()
+                                return self.string_join(var_name, text)
                         elif category == 'list_ops':
                             if 'Sort' in pattern:
                                 var_name = match.group(1)
@@ -268,76 +279,44 @@ class AdvancedInterpreter:
             logger.error(f"Error in print_value: {str(e)}")
 
     def math_operation(self, operation: str, amount: Any, var_name: str):
-        """Handle basic math operations like add, subtract, multiply, divide, double, half"""
+        """Handle basic math operations"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"I can't find a variable called {var_name}")
-                logger.error(f"Variable '{var_name}' not found among variables: {list(self.variables.keys())}")
+                self.output.append(f"Variable '{var_name}' not found")
                 return
 
             original = self.variables[var_name]
-            logger.debug(f"Original value of '{var_name}': {original} (type: {type(original)})")
-            
-            # Handle the 'double' and 'half' operations separately
-            if operation in ['double', 'half']:
-                if not isinstance(original, (int, float)):
-                    self.output.append(f"Cannot perform '{operation}' on non-numeric variable '{var_name}'")
-                    logger.error(f"Variable '{var_name}' is not numeric for operation '{operation}'")
-                    return
-
-                if operation == 'double':
-                    result = original * 2
-                elif operation == 'half':
-                    result = original / 2
-
-                self.variables[var_name] = result
-                self.output.append(f"Updated {var_name} from {original} to {result}")
-                logger.info(f"Performed '{operation}' on '{var_name}': {original} -> {result}")
-                return
-
-            # For other operations, ensure the original value is numeric
             if not isinstance(original, (int, float)):
-                self.output.append(f"Cannot perform '{operation}' on non-numeric variable '{var_name}'")
-                logger.error(f"Variable '{var_name}' is not numeric for operation '{operation}'")
+                self.output.append(f"Cannot perform math operation on non-numeric value: {var_name}")
                 return
 
-            # Determine the amount value
+            # Convert amount to number if it's a string
             if isinstance(amount, str):
-                if amount in self.variables:
-                    amount_val = self.variables[amount]
-                elif self.is_number(amount):
-                    amount_val = float(amount)
-                else:
-                    self.output.append(f"I can't find a variable called {amount}")
-                    logger.error(f"Amount '{amount}' is not a number or variable")
-                    return
-            else:
-                amount_val = float(amount)
-
-            result = None
+                try:
+                    amount = float(amount)
+                except ValueError:
+                    if amount in self.variables:
+                        amount = self.variables[amount]
+                    else:
+                        self.output.append(f"Invalid number or variable: {amount}")
+                        return
 
             if operation == 'add':
-                result = original + amount_val
-            elif operation == 'subtract':
-                result = original - amount_val
+                result = original + amount
             elif operation == 'multiply':
-                result = original * amount_val
+                result = original * amount
             elif operation == 'divide':
-                if amount_val == 0:
+                if amount == 0:
                     self.output.append("Cannot divide by zero")
-                    logger.error("Division by zero attempted")
                     return
-                result = original / amount_val
+                result = original / amount
+            elif operation == 'double':
+                result = original * 2
 
             self.variables[var_name] = result
             self.output.append(f"Updated {var_name} from {original} to {result}")
-            logger.info(f"Performed '{operation}' on '{var_name}': {original} -> {result}")
 
         except Exception as e:
-            # Log and append any unexpected errors during math operations
-            error_msg = f"Error in math operation: {str(e)}"
-            stack_trace = traceback.format_exc()
-            logger.error(f"{error_msg}\n{stack_trace}")
             self.output.append(f"Error in math operation: {str(e)}")
 
     def string_operation(self, var_name: str, operation: str):
