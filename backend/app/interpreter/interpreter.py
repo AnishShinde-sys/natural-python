@@ -36,7 +36,6 @@ class AdvancedInterpreter:
                 # Patterns for printing variables or strings
                 r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
                 r'(?:Print|Show|Display|Output|Say) ["\'](.+)["\']',
-                r'(?:What is|Tell me|Show me)(?: the)? (?:value of )?(.+)',
             ],
             'math_ops': [
                 # Patterns for basic math operations
@@ -45,12 +44,11 @@ class AdvancedInterpreter:
                 r'(?:Multiply|Times) (\w+) by (.*)',
                 r'(?:Divide) (\w+) by (.*)',
                 r'(?:Double) (\w+)',
-                r'(?:Half) (\w+)',
             ],
             'string_ops': [
                 # Patterns for string operations
-                r'(?:Convert|Make|Change) (\w+) (?:to|into) (uppercase|lowercase)',
-                r'(?:Join|Combine|Concatenate) (\w+) with ["\'](.+)["\']',
+                r'(?:Convert|Make|Change) (\w+) to (uppercase|lowercase)',
+                r'Join (\w+) with ["\'](.+)["\']',
             ],
             'list_ops': [
                 # Patterns for list operations
@@ -60,17 +58,13 @@ class AdvancedInterpreter:
             ],
             'math_funcs': [
                 # Patterns for advanced math functions
-                r'(?:Calculate|Compute|Find)(?: the)? square root of (\d+)',
-                r'(?:Find|Get|Calculate)(?: the)? maximum of (\w+)',
+                r'Calculate(?: the)? square root of (\d+)',
+                r'Find(?: the)? maximum of (\w+)',
                 r'Generate(?: a)? random number between (\d+) and (\d+)',
             ],
             'string_format': [
                 # Patterns for string formatting
                 r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
-            ],
-            'conditional_logic': [
-                # Patterns for conditional statements
-                r'If (.*):',
             ],
         }
 
@@ -143,7 +137,7 @@ class AdvancedInterpreter:
                             operation = pattern.split()[0].lower()
                             if operation == 'sort':
                                 var_name = match.group(1)
-                                return self.list_operation(operation, None, var_name)
+                                return self.list_operation('sort', None, var_name)
                             else:
                                 value, var_name = match.groups()
                                 return self.list_operation(operation, value, var_name)
@@ -428,43 +422,30 @@ class AdvancedInterpreter:
             if operation == 'add':
                 try:
                     element = int(value)
+                    lst.append(element)
+                    self.output.append(f"Added {element} to {var_name}: {lst}")
                 except ValueError:
-                    element = value.strip('"\'')
-                lst.append(element)
-                self.output.append(f"Added {element} to {var_name}: {lst}")
-                logger.info(f"Added {element} to list '{var_name}': {lst}")
-
+                    self.output.append(f"Invalid number: {value}")
             elif operation == 'remove':
                 try:
                     element = int(value)
+                    if element in lst:
+                        lst.remove(element)
+                        self.output.append(f"Removed {element} from {var_name}: {lst}")
+                    else:
+                        self.output.append(f"{element} not found in {var_name}")
                 except ValueError:
-                    element = value.strip('"\'')
-                if element in lst:
-                    lst.remove(element)
-                    self.output.append(f"Removed {element} from {var_name}: {lst}")
-                    logger.info(f"Removed {element} from list '{var_name}': {lst}")
-                else:
-                    self.output.append(f"{element} not found in {var_name}")
-                    logger.warning(f"Element '{element}' not found in list '{var_name}' for removal")
-
+                    self.output.append(f"Invalid number: {value}")
             elif operation == 'sort':
                 try:
                     lst.sort()
                     self.output.append(f"Sorted {var_name}: {lst}")
-                    logger.info(f"Sorted list '{var_name}': {lst}")
                 except TypeError:
-                    self.output.append(f"Cannot sort {var_name} due to incompatible types")
-                    logger.error(f"TypeError when trying to sort list '{var_name}'")
-
-            else:
-                self.output.append(f"Unknown list operation: {operation}")
-                logger.error(f"Unknown list operation '{operation}'")
-                return
+                    self.output.append(f"Cannot sort {var_name} - incompatible types")
 
             self.variables[var_name] = lst
 
         except Exception as e:
-            # Log and append any unexpected errors during list operations
             self.output.append(f"Error in list operation: {str(e)}")
             logger.error(f"Error in list_operation: {str(e)}")
 
