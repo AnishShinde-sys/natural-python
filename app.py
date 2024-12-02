@@ -19,7 +19,7 @@ class AdvancedInterpreter:
         self.functions: Dict[str, callable] = {}
         
         # Initialize built-in functions
-        self._init_builtins()
+        self._init_extended_builtins()
 
         # Update command patterns with more natural language support
         self.command_patterns = {
