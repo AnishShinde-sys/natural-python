@@ -28,49 +28,38 @@ class AdvancedInterpreter:
         # Define command patterns for various operations
         # Order is important: more specific patterns should come first to avoid overlaps
         self.command_patterns = {
-            'conditional_logic': [
-                r'If (.*):',  # Conditional statements
-            ],
             'create_var': [
-                # Patterns for creating variables
-                r'(?:Make|Create|Set|Let|Define|Give me) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value|that is) (.+)',
-                r'(?:Let|Set) (\w+) (?:be|equal|to) (.+)',
+                r'(?:Make|Create|Set|Let|Define|Give me) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value|that is) (.*)',
+                r'(?:Let|Set) (\w+) (?:be|equal|to) (.*)',
             ],
-            'list_ops': [
-                # Patterns for list operations
-                r'(?:Add|Append) (\d+) to (\w+)',
-                r'(?:Remove) (\d+) from (\w+)',
-                r'(?:Sort) (\w+)',
+            'print': [
+                r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
             ],
             'math_ops': [
-                # Patterns for basic math operations
                 r'(?:Add|Plus|Increase) (.*?) (?:to|into) (\w+)',
-                r'(?:Subtract|Minus|Decrease) (.*?) from (\w+)',
-                r'(?:Multiply|Times) (\w+) by (.+)',
-                r'(?:Divide) (\w+) by (.+)',
+                r'(?:Multiply) (\w+) by (.*)',
+                r'(?:Divide) (\w+) by (.*)',
                 r'(?:Double) (\w+)',
-                r'(?:Half) (\w+)',
-            ],
-            'math_funcs': [
-                # Patterns for advanced math functions
-                r'(?:Calculate|Compute|Find) (?:the )?(?:square root|sqrt) of (\d+)',
-                r'(?:Find|Get|Calculate) (?:the )?(?:maximum|min) of (\w+)',
-                r'(?:Generate|Create) (?:a )?random number between (\d+) and (\d+)',
-            ],
-            'string_format': [
-                # Patterns for string formatting
-                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
             ],
             'string_ops': [
-                # Patterns for string operations
                 r'Convert (\w+) to (uppercase|lowercase)',
                 r'Join (\w+) with ["\'](.+)["\']',
             ],
-            'print': [
-                # Patterns for printing variables or strings
-                r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
-                r'(?:Print|Show|Display|Output|Say) ["\'](.+)["\']',
-                r'(?:What is|Tell me|Show me)(?: the)? (?:value of )?(.+)',
+            'list_ops': [
+                r'(?:Add|Append) (\d+) to (\w+)',
+                r'(?:Remove) (\d+) from (\w+)',
+                r'Sort (\w+)',
+            ],
+            'math_funcs': [
+                r'Calculate(?: the)? square root of (\d+)',
+                r'Find(?: the)? maximum of (\w+)',
+                r'Generate(?: a)? random number between (\d+)(?:,| and )(\d+)',
+            ],
+            'string_format': [
+                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
+            ],
+            'conditional': [
+                r'If (.*?) is (bigger than|less than|equal to) (\d+):',
             ],
         }
 
@@ -97,80 +86,62 @@ class AdvancedInterpreter:
     def process_line(self, line: str):
         """Process a single line of natural language input"""
         try:
-            # Normalize whitespace
-            line = ' '.join(line.split())
+            line = line.strip()
             logger.info(f"Processing line: {line}")
             
-            # Iterate through command patterns to find a match
             for category, patterns in self.command_patterns.items():
                 for pattern in patterns:
                     match = re.match(pattern, line, re.IGNORECASE)
                     if match:
-                        logger.info(f"Matched category: {category} with pattern: {pattern}")
-                        logger.debug(f"Match groups: {match.groups()}")
-                        
-                        # Route the matched command to the appropriate handler
+                        logger.info(f"Matched pattern in category: {category}")
                         if category == 'create_var':
                             name, value = match.groups()
-                            name = self._clean_variable_name(name)
                             return self.create_variable(name, value)
-                        
                         elif category == 'print':
-                            to_print = match.group(1)
-                            return self.print_value(to_print)
-                        
+                            var_name = match.group(1)
+                            return self.print_variable(var_name)
                         elif category == 'math_ops':
-                            operation = pattern.split()[0].lower()
-                            if operation in ['add', 'subtract']:
-                                amount, var_name = match.groups()
-                                return self.math_operation(operation, amount, var_name)
-                            elif operation in ['multiply', 'divide']:
-                                var_name, amount = match.groups()
-                                return self.math_operation(operation, amount, var_name)
-                            elif operation in ['double', 'half']:
+                            if 'Double' in pattern:
                                 var_name = match.group(1)
-                                return self.math_operation(operation, None, var_name)
-                        
+                                return self.math_operation('double', None, var_name)
+                            else:
+                                amount, var_name = match.groups()
+                                operation = self._determine_math_operation(pattern)
+                                return self.math_operation(operation, amount, var_name)
                         elif category == 'string_ops':
-                            if 'Convert' in pattern or 'Make' in pattern or 'Change' in pattern:
+                            if 'uppercase' in pattern or 'lowercase' in pattern:
                                 var_name, operation = match.groups()
                                 return self.string_operation(var_name, operation)
                             else:
                                 var_name, text = match.groups()
                                 return self.string_join(var_name, text)
-                        
                         elif category == 'list_ops':
-                            operation = pattern.split()[0].lower()
-                            if operation == 'sort':
+                            if 'Sort' in pattern:
                                 var_name = match.group(1)
                                 return self.list_operation('sort', None, var_name)
                             else:
                                 value, var_name = match.groups()
+                                operation = 'add' if 'Add' in pattern else 'remove'
                                 return self.list_operation(operation, value, var_name)
-                        
                         elif category == 'math_funcs':
-                            if 'square root' in pattern or 'sqrt' in pattern:
-                                number = match.group(1)
-                                return self.math_function('sqrt', number)
-                            elif 'maximum' in pattern or 'min' in pattern:
-                                var_name = match.group(1)
-                                func_type = 'max' if 'max' in pattern else 'min'
-                                return self.math_function(func_type, var_name)
-                            else:
+                            if 'random' in pattern:
                                 start, end = match.groups()
                                 return self.math_function('random', f"{start},{end}")
-                        
+                            else:
+                                value = match.group(1)
+                                func = 'sqrt' if 'square root' in pattern else 'max'
+                                return self.math_function(func, value)
                         elif category == 'string_format':
                             template, value = match.groups()
                             return self.string_format(template, value)
-            
-            # If no pattern matched, respond accordingly
-            logger.warning(f"No matching pattern found for input: {line}")
-            logger.debug(f"Available patterns: {self.command_patterns}")
+                        elif category == 'conditional':
+                            var_name, operator, value = match.groups()
+                            return self.handle_conditional(var_name, operator, value)
+
+            logger.warning(f"No matching pattern found for: {line}")
             self.output.append(f"I don't understand: {line}")
 
         except Exception as e:
-            # Log and append any unexpected errors
             error_msg = f"Error processing line: {str(e)}"
             stack_trace = traceback.format_exc()
             logger.error(f"{error_msg}\n{stack_trace}")
