@@ -150,6 +150,65 @@ class AdvancedInterpreter:
                 r'(?:Replace|Substitute) (.*?) (?:with|by|for) (.*?) in (.*)',
                 r'(?:Put|Insert) (.*?) (?:into|in) (?:the )?(?:string|text) (.*)',
             ],
+            'syntax': [
+                # Basic Python syntax
+                r'(?:Show|Display|Explain)(?: the)? syntax (?:for|of) (.*)',
+                r'(?:How|What is)(?: the)? (?:correct )?way to (write|use|do) (.*)',
+            ],
+            'comments': [
+                # Comment operations
+                r'(?:Add|Create|Make)(?: a)? comment (?:saying|with|that says) (.*)',
+                r'(?:Add|Create|Make)(?: a)? multiline comment(?: with)? (.*)',
+            ],
+            'casting': [
+                # Type casting
+                r'(?:Cast|Convert|Change) (.*?) to (?:a |an )?(int|float|str|bool|list|tuple|set|dict)',
+                r'(?:Make|Turn) (.*?) into (?:a |an )?(int|float|str|bool|list|tuple|set|dict)',
+            ],
+            'boolean_ops': [
+                # Boolean operations
+                r'(?:Check|Is|Are) (.*?) (?:equal to|same as|different from|greater than|less than) (.*)',
+                r'(?:Compare|Test) if (.*?) (?:is|are) (.*)',
+            ],
+            'iterators': [
+                # Iterator operations
+                r'(?:Create|Make|Get)(?: an)? iterator (?:for|from) (.*)',
+                r'(?:Get|Fetch)(?: the)? next (?:item|value|element) (?:from|of) (.*)',
+            ],
+            'polymorphism': [
+                # Polymorphic operations
+                r'(?:Create|Define|Make)(?: a)? method (.*?) (?:that|to) override(?:s)? (.*)',
+                r'(?:Override|Redefine|Replace) (?:the )?method (.*?) (?:in|of) (.*)',
+            ],
+            'scope': [
+                # Scope operations
+                r'(?:Create|Define|Make)(?: a)? (global|local|nonlocal) variable (?:called |named )?(.*)',
+                r'(?:Use|Access|Get)(?: the)? (global|local|nonlocal) (?:version of |copy of )?(.*)',
+            ],
+            'json_ops': [
+                # JSON operations
+                r'(?:Convert|Transform|Change) (.*?) to JSON',
+                r'(?:Parse|Read|Load) JSON (?:from|in) (.*)',
+                r'(?:Save|Write|Store) (.*?) as JSON(?: to| in)? (.*)',
+            ],
+            'regex_ops': [
+                # Regular expression operations
+                r'(?:Find|Search|Match) pattern (.*?) in (.*)',
+                r'(?:Replace|Substitute) (.*?) with (.*?) using regex (.*)',
+                r'(?:Split|Break)(?: the)? text (.*?) (?:using|with) regex (.*)',
+            ],
+            'pip_ops': [
+                # PIP operations
+                r'(?:Install|Add|Get)(?: the)? package (.*?)(?:(?: with)? version (.*?))?',
+                r'(?:Uninstall|Remove|Delete) package (.*)',
+                r'(?:List|Show|Display)(?: all)? installed packages',
+            ],
+            'array_ops': [
+                # Array operations
+                r'(?:Create|Make|Initialize)(?: an)? array (?:called |named )?(.*?)(?:(?: with)? values? (.*?))?',
+                r'(?:Get|Access|Fetch) element (?:at |index )?(.*?) from array (.*)',
+                r'(?:Set|Put|Place) value (.*?) at (?:index |position )?(.*?) in array (.*)',
+            ]
         }
 
         # Add more translations for conditions
@@ -161,42 +220,67 @@ class AdvancedInterpreter:
             'matches': 'match',
             'is empty': 'not',
             'has length': 'len',
+            'is instance of': 'isinstance',
+            'has attribute': 'hasattr',
+            'can be called': 'callable',
+            'is subclass of': 'issubclass',
+            'is iterable': 'iter',
+            'is a number': 'isinstance(x, (int, float))',
+            'is a string': 'isinstance(x, str)',
+            'is callable': 'callable',
         }
 
-    def _init_builtins(self):
-        """Initialize built-in functions and modules with extended math support"""
-        self.safe_builtins = {
-            'len': len,
-            'str': str,
-            'int': int,
-            'float': float,
-            'list': list,
-            'dict': dict,
-            'set': set,
-            'tuple': tuple,
-            'range': range,
-            'round': round,
-            'abs': abs,
-            'sum': sum,
-            'min': min,
-            'max': max,
-            'sorted': sorted,
-            'random': random.random,
-            'randint': random.randint,
-            'math': {
-                'pi': math.pi,
-                'sqrt': math.sqrt,
-                'sin': math.sin,
-                'cos': math.cos,
-                'tan': math.tan,
-                'floor': math.floor,
-                'ceil': math.ceil,
-                'exp': math.exp,
-                'log': math.log,
-                'pow': math.pow,
+        # Initialize additional built-ins
+        self._init_extended_builtins()
+
+    def _init_extended_builtins(self):
+        """Initialize additional built-in functions and modules"""
+        self.safe_builtins.update({
+            # Type checking
+            'isinstance': isinstance,
+            'issubclass': issubclass,
+            'hasattr': hasattr,
+            'callable': callable,
+            'iter': iter,
+            'next': next,
+            
+            # JSON operations
+            'json': {
+                'loads': json.loads,
+                'dumps': json.dumps,
+                'load': json.load,
+                'dump': json.dump
             },
-            'datetime': datetime.datetime.now,
-        }
+            
+            # Regular expressions
+            're': {
+                'match': re.match,
+                'search': re.search,
+                'findall': re.findall,
+                'sub': re.sub,
+                'split': re.split,
+                'compile': re.compile
+            },
+            
+            # Additional type conversions
+            'bool': bool,
+            'bytes': bytes,
+            'bytearray': bytearray,
+            'complex': complex,
+            'frozenset': frozenset,
+            
+            # Additional built-in functions
+            'all': all,
+            'any': any,
+            'chr': chr,
+            'ord': ord,
+            'bin': bin,
+            'hex': hex,
+            'oct': oct,
+            'id': id,
+            'hash': hash,
+            'repr': repr,
+        })
 
     def process_line(self, line: str):
         """Process a single line with improved natural language handling"""
@@ -251,22 +335,162 @@ class AdvancedInterpreter:
             self.output.append(f"Error: {str(e)}")
 
     def _determine_math_operation(self, pattern: str) -> str:
-        """Determine the math operation from the pattern"""
+        """
+        Determine the math operation from the pattern with comprehensive Python operation support
+        and natural language handling.
+        """
         operations = {
-            'Add': ['add', 'plus', 'increase', 'increment'],
-            'Subtract': ['subtract', 'minus', 'decrease', 'decrement'],
-            'Multiply': ['multiply', 'times', 'scale'],
-            'Divide': ['divide', 'split'],
-            'Double': ['double'],
-            'Half': ['half'],
-            'Increase': ['increase', 'make bigger'],
-            'Decrease': ['decrease', 'make smaller']
+            # Basic Arithmetic
+            'Add': [
+                'add', 'plus', 'increase', 'increment', 'combine', 'sum',
+                'raise by', 'grow by', 'expand by', 'augment by', '+'
+            ],
+            'Subtract': [
+                'subtract', 'minus', 'decrease', 'decrement', 'reduce',
+                'take away', 'remove', 'lower by', 'diminish by', 'deduct', '-'
+            ],
+            'Multiply': [
+                'multiply', 'times', 'scale', 'product', '*',
+                'multiply by', 'scale by', 'amplify by', 'x'
+            ],
+            'Divide': [
+                'divide', 'split', 'share', 'quotient', '/',
+                'divide by', 'split by', 'distribute by'
+            ],
+            
+            # Extended Math Operations
+            'Power': [
+                'power', 'exponent', 'squared', 'cubed', '**',
+                'raise to', 'to the power of', 'exponential'
+            ],
+            'Root': [
+                'root', 'sqrt', 'square root', 'cube root',
+                'nth root', 'radical'
+            ],
+            'Modulo': [
+                'modulo', 'remainder', 'mod', '%',
+                'modulus', 'remainder of'
+            ],
+            'FloorDiv': [
+                'floor divide', 'integer divide', '//',
+                'divide with floor', 'integer division'
+            ],
+            
+            # Numeric Shortcuts
+            'Double': [
+                'double', 'twice', 'multiply by 2', '×2',
+                'make twice as big'
+            ],
+            'Triple': [
+                'triple', 'thrice', 'multiply by 3', '×3',
+                'make three times as big'
+            ],
+            'Half': [
+                'half', 'halve', 'divide by 2', '÷2',
+                'make half as big'
+            ],
+            'Quarter': [
+                'quarter', 'fourth', 'divide by 4', '÷4',
+                'make a quarter as big'
+            ],
+            
+            # Percentage Operations
+            'Percentage': [
+                'percent of', 'percentage of', '%',
+                'increase by percent', 'decrease by percent'
+            ],
+            
+            # Bitwise Operations
+            'BitwiseAnd': [
+                'bitwise and', 'bit and', '&',
+                'and bits', 'binary and'
+            ],
+            'BitwiseOr': [
+                'bitwise or', 'bit or', '|',
+                'or bits', 'binary or'
+            ],
+            'BitwiseXor': [
+                'bitwise xor', 'bit xor', '^',
+                'xor bits', 'binary xor'
+            ],
+            'BitwiseNot': [
+                'bitwise not', 'bit not', '~',
+                'not bits', 'binary not'
+            ],
+            'LeftShift': [
+                'left shift', 'shift left', '<<',
+                'binary left shift'
+            ],
+            'RightShift': [
+                'right shift', 'shift right', '>>',
+                'binary right shift'
+            ],
+            
+            # Rounding Operations
+            'Round': [
+                'round', 'round to', 'round off',
+                'round to nearest', 'approximate'
+            ],
+            'Floor': [
+                'floor', 'round down', 'floor value',
+                'round towards negative'
+            ],
+            'Ceil': [
+                'ceil', 'ceiling', 'round up',
+                'round towards positive'
+            ],
+            
+            # Statistical Operations
+            'Absolute': [
+                'absolute', 'abs', 'absolute value',
+                'magnitude', 'distance from zero'
+            ],
+            'Maximum': [
+                'maximum', 'max', 'largest',
+                'biggest', 'highest'
+            ],
+            'Minimum': [
+                'minimum', 'min', 'smallest',
+                'least', 'lowest'
+            ],
+            
+            # Natural Language Variations
+            'Increase': [
+                'increase', 'make bigger', 'raise', 'grow',
+                'enhance', 'boost', 'elevate'
+            ],
+            'Decrease': [
+                'decrease', 'make smaller', 'lower', 'reduce',
+                'diminish', 'shrink', 'lessen'
+            ],
+            'Negate': [
+                'negate', 'make negative', 'opposite',
+                'reverse sign', 'change sign'
+            ]
         }
         
         pattern_lower = pattern.lower()
+        
+        # First try exact matches
+        for op, keywords in operations.items():
+            if any(keyword == pattern_lower for keyword in keywords):
+                return op
+            
+        # Then try partial matches
         for op, keywords in operations.items():
             if any(keyword in pattern_lower for keyword in keywords):
                 return op
+            
+        # Handle special compound cases
+        if 'times bigger' in pattern_lower:
+            return 'Multiply'
+        if 'times smaller' in pattern_lower:
+            return 'Divide'
+        if 'percent more' in pattern_lower:
+            return 'PercentageIncrease'
+        if 'percent less' in pattern_lower:
+            return 'PercentageDecrease'
+        
         return None
 
     def math_operation(self, operation: str, amount: str, var_name: str):
@@ -620,6 +844,55 @@ class AdvancedInterpreter:
 
         except Exception as e:
             self.output.append(f"Error formatting string: {str(e)}")
+
+    def list_operation(self, operation: str, value: str, list_name: str, position: int = None):
+        """Handle list operations with improved value handling"""
+        try:
+            if list_name not in self.variables:
+                self.output.append(f"I can't find a list called {list_name}")
+                return
+
+            if not isinstance(self.variables[list_name], list):
+                self.output.append(f"{list_name} is not a list")
+                return
+
+            # Process the value
+            if isinstance(value, str):
+                if value.startswith('"') or value.startswith("'"):
+                    processed_value = value.strip('"\'')
+                elif value in self.variables:
+                    processed_value = self.variables[value]
+                else:
+                    try:
+                        # Try to evaluate as a literal or expression
+                        processed_value = eval(value, {"__builtins__": self.safe_builtins}, self.variables)
+                    except:
+                        processed_value = value  # Use raw value if evaluation fails
+
+            current_list = self.variables[list_name]
+
+            if operation == 'Add':
+                current_list.append(processed_value)
+                self.output.append(f"Added {processed_value} to {list_name}")
+            elif operation == 'Remove':
+                if processed_value in current_list:
+                    current_list.remove(processed_value)
+                    self.output.append(f"Removed {processed_value} from {list_name}")
+                else:
+                    self.output.append(f"Could not find {processed_value} in {list_name}")
+            elif operation == 'Insert':
+                try:
+                    pos = int(position) if position else 0
+                    if 0 <= pos <= len(current_list):
+                        current_list.insert(pos, processed_value)
+                        self.output.append(f"Inserted {processed_value} at position {pos} in {list_name}")
+                    else:
+                        self.output.append(f"Position {pos} is out of range for {list_name}")
+                except (ValueError, TypeError):
+                    self.output.append(f"Invalid position: {position}")
+
+        except Exception as e:
+            self.output.append(f"Error in list operation: {str(e)}")
 
 # Create Flask app
 app = Flask(__name__)
