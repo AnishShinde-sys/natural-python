@@ -235,24 +235,93 @@ class AdvancedInterpreter:
         self._init_extended_builtins()
 
     def _init_extended_builtins(self):
-        """Initialize additional built-in functions and modules"""
-        self.safe_builtins.update({
-            # Type checking
+        """Initialize extended built-in functions and modules for safe execution"""
+        self.safe_builtins = {
+            # Basic built-ins
+            'abs': abs,
+            'all': all,
+            'any': any,
+            'ascii': ascii,
+            'bin': bin,
+            'bool': bool,
+            'chr': chr,
+            'dict': dict,
+            'dir': dir,
+            'divmod': divmod,
+            'enumerate': enumerate,
+            'filter': filter,
+            'float': float,
+            'format': format,
+            'frozenset': frozenset,
+            'hash': hash,
+            'hex': hex,
+            'int': int,
             'isinstance': isinstance,
             'issubclass': issubclass,
-            'hasattr': hasattr,
-            'callable': callable,
             'iter': iter,
+            'len': len,
+            'list': list,
+            'map': map,
+            'max': max,
+            'min': min,
             'next': next,
-            
+            'oct': oct,
+            'ord': ord,
+            'pow': pow,
+            'range': range,
+            'repr': repr,
+            'reversed': reversed,
+            'round': round,
+            'set': set,
+            'slice': slice,
+            'sorted': sorted,
+            'str': str,
+            'sum': sum,
+            'tuple': tuple,
+            'type': type,
+            'zip': zip,
+
+            # Math module functions
+            'math': {
+                'sqrt': math.sqrt,
+                'ceil': math.ceil,
+                'floor': math.floor,
+                'pi': math.pi,
+                'e': math.e,
+                'sin': math.sin,
+                'cos': math.cos,
+                'tan': math.tan,
+                'log': math.log,
+                'log10': math.log10,
+                'exp': math.exp,
+                'degrees': math.degrees,
+                'radians': math.radians,
+            },
+
+            # Random module functions
+            'random': {
+                'random': random.random,
+                'randint': random.randint,
+                'choice': random.choice,
+                'shuffle': random.shuffle,
+                'sample': random.sample,
+                'uniform': random.uniform,
+            },
+
+            # Datetime functions
+            'datetime': {
+                'now': datetime.datetime.now,
+                'date': datetime.date,
+                'time': datetime.time,
+                'timedelta': datetime.timedelta,
+            },
+
             # JSON operations
             'json': {
                 'loads': json.loads,
                 'dumps': json.dumps,
-                'load': json.load,
-                'dump': json.dump
             },
-            
+
             # Regular expressions
             're': {
                 'match': re.match,
@@ -260,28 +329,60 @@ class AdvancedInterpreter:
                 'findall': re.findall,
                 'sub': re.sub,
                 'split': re.split,
-                'compile': re.compile
+                'compile': re.compile,
             },
-            
-            # Additional type conversions
-            'bool': bool,
-            'bytes': bytes,
-            'bytearray': bytearray,
-            'complex': complex,
-            'frozenset': frozenset,
-            
-            # Additional built-in functions
-            'all': all,
-            'any': any,
-            'chr': chr,
-            'ord': ord,
-            'bin': bin,
-            'hex': hex,
-            'oct': oct,
-            'id': id,
-            'hash': hash,
-            'repr': repr,
-        })
+
+            # String operations
+            'str_ops': {
+                'lower': str.lower,
+                'upper': str.upper,
+                'title': str.title,
+                'capitalize': str.capitalize,
+                'strip': str.strip,
+                'lstrip': str.lstrip,
+                'rstrip': str.rstrip,
+                'replace': str.replace,
+                'split': str.split,
+                'join': str.join,
+                'format': str.format,
+            },
+
+            # List operations
+            'list_ops': {
+                'append': list.append,
+                'extend': list.extend,
+                'insert': list.insert,
+                'remove': list.remove,
+                'pop': list.pop,
+                'clear': list.clear,
+                'index': list.index,
+                'count': list.count,
+                'sort': list.sort,
+                'reverse': list.reverse,
+            },
+
+            # Dict operations
+            'dict_ops': {
+                'keys': dict.keys,
+                'values': dict.values,
+                'items': dict.items,
+                'get': dict.get,
+                'update': dict.update,
+                'clear': dict.clear,
+                'copy': dict.copy,
+            },
+
+            # Set operations
+            'set_ops': {
+                'add': set.add,
+                'remove': set.remove,
+                'discard': set.discard,
+                'union': set.union,
+                'intersection': set.intersection,
+                'difference': set.difference,
+                'symmetric_difference': set.symmetric_difference,
+            }
+        }
 
     def process_line(self, line: str):
         """Process a single line with improved natural language handling"""
@@ -308,16 +409,63 @@ class AdvancedInterpreter:
                             return self.print_value(to_print)
                             
                         elif category == 'math_ops':
-                            # Handle math operations
-                            if 'Make' in pattern or 'Increase' in pattern:
-                                var_name = match.group(1)
-                                amount = match.group(2)
-                            else:
-                                amount, var_name = match.groups()
-                            var_name = self._clean_variable_name(var_name)
+                            # Determine the operation based on the pattern
                             operation = self._determine_math_operation(pattern)
+                            
+                            if operation in ['Add', 'Subtract', 'Multiply', 'Divide']:
+                                # For operations like "Add 5 to score"
+                                amount, var_name = match.groups()
+                            elif operation in ['Increase', 'Decrease', 'Double', 'Half']:
+                                # For operations like "Increase score by 5"
+                                var_name = match.group(1)
+                                amount = match.group(2) if len(match.groups()) > 1 else '1'
+                            else:
+                                # Default assignment if operation is unrecognized
+                                amount, var_name = match.groups()
+                            
+                            var_name = self._clean_variable_name(var_name)
                             if operation:
                                 return self.math_operation(operation, amount, var_name)
+                            
+                        elif category == 'syntax':
+                            # Handle syntax queries
+                            topic = match.group(1)
+                            return self.show_syntax(topic)
+                            
+                        elif category == 'comments':
+                            # Handle comment creation
+                            comment_text = match.group(1)
+                            return self.create_comment(comment_text)
+                            
+                        elif category == 'casting':
+                            # Handle type casting
+                            value, target_type = match.groups()
+                            return self.cast_value(value, target_type)
+                            
+                        elif category == 'boolean_ops':
+                            # Handle boolean operations
+                            left, right = match.groups()
+                            return self.boolean_operation(left, right)
+                            
+                        elif category == 'iterators':
+                            # Handle iterator operations
+                            collection = match.group(1)
+                            return self.create_iterator(collection)
+                            
+                        elif category == 'json_ops':
+                            # Handle JSON operations
+                            data = match.group(1)
+                            return self.json_operation(data)
+                            
+                        elif category == 'regex_ops':
+                            # Handle regex operations
+                            pattern, text = match.groups()
+                            return self.regex_operation(pattern, text)
+                            
+                        elif category == 'pip_ops':
+                            # Handle PIP operations
+                            package = match.group(1)
+                            return self.pip_operation(package)
 
             # Add handling for input patterns
             if match := re.match(self.command_patterns['input'][0], line, re.IGNORECASE):
