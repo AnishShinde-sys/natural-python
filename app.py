@@ -17,6 +17,7 @@ class AdvancedInterpreter:
         self.output: List[str] = []
         self.classes: Dict[str, Dict] = {}
         self.functions: Dict[str, callable] = {}
+        self.safe_builtins = {}
         
         # Initialize built-in functions
         self._init_extended_builtins()
