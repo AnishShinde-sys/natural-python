@@ -37,7 +37,7 @@ class AdvancedInterpreter:
             ],
             'math_ops': [
                 r'(?:Add|Plus|Increase) (\d+(?:\.\d+)?|\w+) (?:to|into) (\w+)',
-                r'(?:Multiply) (\w+) by (\d+(?:\.\d+)?|\w+)',
+                r'(?:Multiply|Times) (\w+) by (\d+(?:\.\d+)?|\w+)',
                 r'(?:Divide) (\w+) by (\d+(?:\.\d+)?|\w+)',
                 r'(?:Double) (\w+)',
             ],
@@ -111,10 +111,15 @@ class AdvancedInterpreter:
                             if 'Double' in pattern:
                                 var_name = match.group(1)
                                 return self.math_operation('double', 2, var_name)
+                            elif 'Multiply' in pattern:
+                                var_name, amount = match.groups()
+                                return self.math_operation('multiply', amount, var_name)
+                            elif 'Divide' in pattern:
+                                var_name, amount = match.groups()
+                                return self.math_operation('divide', amount, var_name)
                             else:
                                 amount, var_name = match.groups()
-                                operation = self._determine_math_operation(line)
-                                return self.math_operation(operation, amount, var_name)
+                                return self.math_operation('add', amount, var_name)
                         elif category == 'string_ops':
                             if 'Convert' in line:
                                 var_name, operation = match.groups()
@@ -298,9 +303,10 @@ class AdvancedInterpreter:
                     if amount in self.variables:
                         amount = self.variables[amount]
                     else:
-                        self.output.append(f"Invalid number or variable: {amount}")
+                        self.output.append(f"Invalid number: {amount}")
                         return
 
+            result = None
             if operation == 'add':
                 result = original + amount
             elif operation == 'multiply':
@@ -315,38 +321,35 @@ class AdvancedInterpreter:
 
             self.variables[var_name] = result
             self.output.append(f"Updated {var_name} from {original} to {result}")
+            logger.info(f"Performed {operation} on {var_name}: {original} -> {result}")
 
         except Exception as e:
-            self.output.append(f"Error in math operation: {str(e)}")
+            error_msg = f"Error in math operation: {str(e)}"
+            logger.error(error_msg)
+            self.output.append(error_msg)
 
     def string_operation(self, var_name: str, operation: str):
         """Handle string operations like converting to uppercase or lowercase"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"I can't find a string called {var_name}")
-                logger.error(f"String '{var_name}' not found among variables: {list(self.variables.keys())}")
+                self.output.append(f"Variable '{var_name}' not found")
                 return
 
             value = self.variables[var_name]
-            logger.debug(f"Original value of '{var_name}': {value} (type: {type(value)})")
-            
             if not isinstance(value, str):
-                self.output.append(f"'{var_name}' is not a string")
-                logger.error(f"Variable '{var_name}' is not a string for string operation")
+                self.output.append(f"Cannot perform string operation on non-string value: {var_name}")
                 return
 
             if operation.lower() == 'uppercase':
                 result = value.upper()
+                self.variables[var_name] = result
+                self.output.append(f"Updated {var_name} to {result}")
             elif operation.lower() == 'lowercase':
                 result = value.lower()
+                self.variables[var_name] = result
+                self.output.append(f"Updated {var_name} to {result}")
             else:
                 self.output.append(f"Unknown string operation: {operation}")
-                logger.error(f"Unknown string operation '{operation}'")
-                return
-
-            self.variables[var_name] = result
-            self.output.append(f"Converted {var_name} to {operation}: {result}")
-            logger.info(f"Performed '{operation}' on '{var_name}': {value} -> {result}")
 
         except Exception as e:
             self.output.append(f"Error in string operation: {str(e)}")
@@ -356,93 +359,72 @@ class AdvancedInterpreter:
         """Handle joining a string with another string"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"I can't find a string called {var_name}")
-                logger.error(f"String '{var_name}' not found among variables: {list(self.variables.keys())}")
+                self.output.append(f"Variable '{var_name}' not found")
                 return
 
             value = self.variables[var_name]
-            logger.debug(f"Original value of '{var_name}': {value} (type: {type(value)})")
-            
             if not isinstance(value, str):
-                self.output.append(f"'{var_name}' is not a string")
-                logger.error(f"Variable '{var_name}' is not a string for string joining")
+                self.output.append(f"Cannot join non-string value: {var_name}")
                 return
 
             # Remove surrounding quotes if present
             text = text.strip('"\'')
             result = value + text
             self.variables[var_name] = result
-            self.output.append(f"Joined {var_name} with \"{text}\": {result}")
-            logger.info(f"Joined '{var_name}' with \"{text}\": {result}")
+            self.output.append(f"Updated {var_name} to {result}")
 
         except Exception as e:
-            # Log and append any errors encountered during string joining
-            self.output.append(f"Error in string join: {str(e)}")
+            self.output.append(f"Error joining strings: {str(e)}")
             logger.error(f"Error in string_join: {str(e)}")
 
     def list_operation(self, operation: str, value: Any, var_name: str):
         """Handle list operations like add, remove, sort"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"I can't find a list called {var_name}")
-                logger.error(f"List '{var_name}' not found among variables: {list(self.variables.keys())}")
+                self.output.append(f"Variable '{var_name}' not found")
                 return
 
             lst = self.variables[var_name]
-            logger.debug(f"Original list '{var_name}': {lst} (type: {type(lst)})")
-            
             if not isinstance(lst, list):
-                self.output.append(f"'{var_name}' is not a list")
-                logger.error(f"Variable '{var_name}' is not a list for list operation")
+                self.output.append(f"Cannot perform list operation on non-list value: {var_name}")
                 return
 
-            if operation == 'add' or operation == 'append':
-                # Handle quoted strings by removing quotes
-                if isinstance(value, str) and value.startswith(("'", '"')) and value.endswith(("'", '"')):
-                    element = value[1:-1]  # Remove quotes
-                else:
+            if operation == 'add':
+                # Convert value to appropriate type
+                try:
+                    element = int(value)
+                except ValueError:
                     try:
-                        element = int(value)
+                        element = float(value)
                     except ValueError:
-                        try:
-                            element = float(value)
-                        except ValueError:
-                            element = value
+                        element = value.strip('"\'')
+                
                 lst.append(element)
-                self.output.append(f"Added {element} to {var_name}: {lst}")
-                logger.info(f"Added {element} to list '{var_name}': {lst}")
+                self.variables[var_name] = lst
+                self.output.append(f"Updated {var_name} to {lst}")
 
             elif operation == 'remove':
                 try:
                     element = int(value)
                 except ValueError:
                     element = value.strip('"\'')
+                
                 if element in lst:
                     lst.remove(element)
-                    self.output.append(f"Removed {element} from {var_name}: {lst}")
-                    logger.info(f"Removed {element} from list '{var_name}': {lst}")
+                    self.variables[var_name] = lst
+                    self.output.append(f"Updated {var_name} to {lst}")
                 else:
-                    self.output.append(f"{element} not found in {var_name}")
-                    logger.warning(f"Element '{element}' not found in list '{var_name}' for removal")
+                    self.output.append(f"Element {element} not found in {var_name}")
 
             elif operation == 'sort':
                 try:
                     lst.sort()
-                    self.output.append(f"Sorted {var_name}: {lst}")
-                    logger.info(f"Sorted list '{var_name}': {lst}")
+                    self.variables[var_name] = lst
+                    self.output.append(f"Updated {var_name} to {lst}")
                 except TypeError:
-                    self.output.append(f"Cannot sort {var_name} due to incompatible types")
-                    logger.error(f"TypeError when trying to sort list '{var_name}'")
-
-            else:
-                self.output.append(f"Unknown list operation: {operation}")
-                logger.error(f"Unknown list operation '{operation}'")
-                return
-
-            self.variables[var_name] = lst
+                    self.output.append(f"Cannot sort list with mixed types")
 
         except Exception as e:
-            # Log and append any unexpected errors during list operations
             self.output.append(f"Error in list operation: {str(e)}")
             logger.error(f"Error in list_operation: {str(e)}")
 
