@@ -5,13 +5,13 @@ from typing import Dict, Any, List
 import logging
 import traceback
 
-# Configure logging with a detailed format and multiple handlers
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),  # Logs to console
-        logging.FileHandler('interpreter.log')  # Logs to a file named interpreter.log
+        logging.StreamHandler(),
+        logging.FileHandler('interpreter.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -20,51 +20,8 @@ class AdvancedInterpreter:
     def __init__(self):
         self.variables: Dict[str, Any] = {}
         self.output: List[str] = []
-        self.safe_builtins = {}
         
         # Initialize safe built-in functions
-        self._init_extended_builtins()
-
-        # Updated command patterns to better handle all cases
-        self.command_patterns = {
-            'create_var': [
-                r'(?:Make|Create|Set|Let|Define|Give me) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with|with value|that is) (.*)',
-                r'(?:Let|Set) (\w+) (?:be|equal|to) (.*)',
-            ],
-            'print': [
-                r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
-                r'(?:Print|Show|Display|Output|Say) ["\'](.+?)["\']',  # Added for direct string printing
-            ],
-            'math_ops': [
-                r'(?:Add|Plus|Increase) (\d+(?:\.\d+)?|\w+) (?:to|into) (\w+)',
-                r'(?:Multiply|Times) (\w+) by (\d+(?:\.\d+)?|\w+)',
-                r'(?:Divide) (\w+) by (\d+(?:\.\d+)?|\w+)',
-                r'(?:Double) (\w+)',
-            ],
-            'string_ops': [
-                r'Convert (\w+) to (uppercase|lowercase)',
-                r'Join (\w+) with ["\'](.+?)["\']',  # Fixed pattern for joining strings
-            ],
-            'list_ops': [
-                r'(?:Add|Append) (\d+|\w+|(?:["\']).*?(?:["\'])) to (\w+)',
-                r'(?:Remove) (\d+|\w+|(?:["\']).*?(?:["\'])) from (\w+)',
-                r'Sort (\w+)',
-            ],
-            'math_funcs': [
-                r'Calculate(?: the)? square root of (\d+)',
-                r'Find(?: the)? maximum of (\w+)',
-                r'Generate(?: a)? random number between (\d+)(?:,| and )(\d+)',
-            ],
-            'string_format': [
-                r'Format string ["\'](.+?)["\'] with ["\'](.+?)["\']',  # Fixed quote handling
-            ],
-            'conditional': [
-                r'If (.*?) is (bigger than|less than|equal to) (\d+):',
-            ],
-        }
-
-    def _init_extended_builtins(self):
-        """Initialize safe built-in functions for evaluation"""
         self.safe_builtins = {
             'abs': abs,
             'len': len,
@@ -83,6 +40,74 @@ class AdvancedInterpreter:
             'random': random,
         }
 
+        # Define command patterns
+        self.command_patterns = {
+            'create_var': [
+                r'(?:Make|Create|Set|Let|Define) (?:a |an |the )?(?:new )?(?:number|string|list|dict|set|variable)? ?(?:called |named |as )?(\w+) (?:equal to|to|be|as|with) (.*)',
+            ],
+            'print': [
+                r'(?:Print|Show|Display|Output) (?:the )?(?:value of )?([^,]+)',
+                r'(?:Print|Show|Display|Output) ["\'](.+?)["\']',
+            ],
+            'math_ops': [
+                r'(?:Add|Plus|Increase) (\d+(?:\.\d+)?|\w+) (?:to|into) (\w+)',
+                r'(?:Multiply) (\w+) by (\d+(?:\.\d+)?|\w+)',
+                r'(?:Divide) (\w+) by (\d+(?:\.\d+)?|\w+)',
+                r'(?:Double) (\w+)',
+            ],
+            'string_ops': [
+                r'Convert (\w+) to (uppercase|lowercase)',
+                r'Join (\w+) with ["\'](.+?)["\']',
+            ],
+            'list_ops': [
+                r'(?:Add|Append) (\d+|\w+|(?:["\']).*?(?:["\'])) to (\w+)',
+                r'(?:Remove) (\d+|\w+|(?:["\']).*?(?:["\'])) from (\w+)',
+                r'Sort (\w+)',
+            ],
+            'math_funcs': [
+                r'Calculate(?: the)? square root of (\d+)',
+                r'Find(?: the)? maximum of (\w+)',
+                r'Generate(?: a)? random number between (\d+)(?:,| and )(\d+)',
+            ],
+            'string_format': [
+                r'Format string ["\'](.+?)["\'] with ["\'](.+?)["\']',
+            ],
+            'conditional': [
+                r'If (.*?) is (bigger than|less than|equal to) (\d+):',
+            ],
+        }
+
+    def process_code(self, code: str) -> str:
+        """Process multiple lines of code"""
+        self.output = []
+        try:
+            lines = code.strip().split('\n')
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
+                if line and not line.startswith('#'):
+                    if line.lower().startswith('if') and line.endswith(':'):
+                        # Handle conditional blocks
+                        condition = line[2:-1].strip()
+                        block_lines = []
+                        i += 1
+                        while i < len(lines) and (lines[i].startswith('    ') or lines[i].startswith('\t')):
+                            block_lines.append(lines[i].strip())
+                            i += 1
+                        if self.evaluate_condition(condition):
+                            for block_line in block_lines:
+                                self.process_line(block_line)
+                        continue
+                    else:
+                        self.process_line(line)
+                i += 1
+            return '\n'.join(self.output)
+        except Exception as e:
+            error_msg = f"Error processing code: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            self.output.append(f"Error: {str(e)}")
+            return '\n'.join(self.output)
+
     def process_line(self, line: str):
         """Process a single line of natural language input"""
         try:
@@ -90,8 +115,8 @@ class AdvancedInterpreter:
             logger.info(f"Processing line: {line}")
             
             # Handle direct string printing first
-            if line.startswith(('Print', 'Show', 'Display', 'Output', 'Say')) and ('"' in line or "'" in line):
-                match = re.match(r'(?:Print|Show|Display|Output|Say) ["\'](.+?)["\']', line)
+            if line.startswith(('Print', 'Show', 'Display', 'Output')) and ('"' in line or "'" in line):
+                match = re.match(r'(?:Print|Show|Display|Output) ["\'](.+?)["\']', line)
                 if match:
                     self.output.append(match.group(1))
                     return
@@ -111,15 +136,13 @@ class AdvancedInterpreter:
                             if 'Double' in pattern:
                                 var_name = match.group(1)
                                 return self.math_operation('double', 2, var_name)
-                            elif 'Multiply' in pattern:
-                                var_name, amount = match.groups()
-                                return self.math_operation('multiply', amount, var_name)
-                            elif 'Divide' in pattern:
-                                var_name, amount = match.groups()
-                                return self.math_operation('divide', amount, var_name)
                             else:
-                                amount, var_name = match.groups()
-                                return self.math_operation('add', amount, var_name)
+                                if 'Multiply' in line or 'Divide' in line:
+                                    var_name, amount = match.groups()
+                                else:
+                                    amount, var_name = match.groups()
+                                operation = self._determine_math_operation(line)
+                                return self.math_operation(operation, amount, var_name)
                         elif category == 'string_ops':
                             if 'Convert' in line:
                                 var_name, operation = match.groups()
@@ -161,82 +184,17 @@ class AdvancedInterpreter:
             logger.error(f"{error_msg}\n{stack_trace}")
             self.output.append(f"Error: {str(e)}")
 
-    def process_code(self, code: str) -> str:
-        """Process multiple lines of code and return the accumulated output"""
-        self.output = []
-        try:
-            logger.info("Starting code processing")
-            logger.debug(f"Input code:\n{code}")
-            
-            # Split the code into individual lines
-            lines = code.strip().split('\n')
-            i = 0
-            while i < len(lines):
-                line = lines[i].strip()
-                if line and not line.startswith('#'):
-                    if line.lower().startswith('if') and line.endswith(':'):
-                        # Handle conditional blocks
-                        condition = line[2:-1].strip()
-                        block_lines = []
-                        i += 1
-                        # Collect indented lines under the condition
-                        while i < len(lines) and (lines[i].startswith('    ') or lines[i].startswith('\t')):
-                            block_lines.append(lines[i].strip())
-                            i += 1
-                        # Evaluate the condition and execute the block if True
-                        if self.evaluate_condition(condition):
-                            for block_line in block_lines:
-                                self.process_line(block_line)
-                        continue  # Skip the increment at the end
-                    else:
-                        # Process a single line
-                        self.process_line(line)
-                i += 1
-            return '\n'.join(self.output)
-        except Exception as e:
-            # Log and append any errors encountered during code processing
-            error_msg = f"Error processing code: {str(e)}"
-            stack_trace = traceback.format_exc()
-            logger.error(f"{error_msg}\n{stack_trace}")
-            self.output.append(f"Error: {str(e)}")
-            return '\n'.join(self.output)
-
-    def evaluate_condition(self, condition: str) -> bool:
-        """Evaluate a condition translated to Python syntax"""
-        try:
-            # Translate natural language condition to Python condition
-            condition = self.translate_condition(condition)
-            logger.info(f"Evaluating condition: {condition}")
-            return eval(condition, {"__builtins__": self.safe_builtins}, self.variables)
-        except Exception as e:
-            # Log and append any errors encountered during condition evaluation
-            self.output.append(f"Error evaluating condition: {str(e)}")
-            logger.error(f"Error in evaluate_condition method: {str(e)}")
-            return False
-
-    def translate_condition(self, condition: str) -> str:
-        """Translate natural language conditions to Python syntax"""
-        translations = {
-            'is bigger than': '>',
-            'is greater than': '>',
-            'is less than': '<',
-            'equals': '==',
-            'is equal to': '==',
-            'is not equal to': '!=',
-            'is greater than or equal to': '>=',
-            'is less than or equal to': '<=',
-            'and': 'and',
-            'or': 'or',
-            'not': 'not',
-            'contains': 'in',
-            'is in': 'in',
-            'is': '=='
-        }
-
-        for phrase, symbol in translations.items():
-            condition = condition.replace(phrase, symbol)
-        logger.info(f"Translated condition to Python syntax: {condition}")
-        return condition
+    def _determine_math_operation(self, line: str) -> str:
+        """Helper method to determine the math operation from the command"""
+        if re.search(r'Add|Plus|Increase', line, re.IGNORECASE):
+            return 'add'
+        elif re.search(r'Multiply', line, re.IGNORECASE):
+            return 'multiply'
+        elif re.search(r'Divide', line, re.IGNORECASE):
+            return 'divide'
+        elif re.search(r'Double', line, re.IGNORECASE):
+            return 'double'
+        return 'unknown'
 
     def create_variable(self, name: str, value: str):
         """Create a variable with the given name and value"""
@@ -257,7 +215,6 @@ class AdvancedInterpreter:
             logger.info(f"Successfully created variable: {name} = {evaluated_value}")
             
         except Exception as e:
-            # Log and append any errors encountered during variable creation
             error_msg = f"Error creating variable '{name}': {str(e)}"
             stack_trace = traceback.format_exc()
             logger.error(f"{error_msg}\n{stack_trace}")
@@ -268,18 +225,14 @@ class AdvancedInterpreter:
         try:
             clean_value = value.strip()
             if clean_value in self.variables:
-                # Print the value of a variable
                 self.output.append(str(self.variables[clean_value]))
             else:
                 try:
-                    # Attempt to evaluate the value as a Python expression
                     result = eval(clean_value, {"__builtins__": self.safe_builtins}, self.variables)
                     self.output.append(str(result))
                 except:
-                    # If evaluation fails, print the raw string
                     self.output.append(clean_value)
         except Exception as e:
-            # Log and append any errors encountered during printing
             self.output.append(f"Error printing value: {str(e)}")
             logger.error(f"Error in print_value: {str(e)}")
 
@@ -321,15 +274,13 @@ class AdvancedInterpreter:
 
             self.variables[var_name] = result
             self.output.append(f"Updated {var_name} from {original} to {result}")
-            logger.info(f"Performed {operation} on {var_name}: {original} -> {result}")
 
         except Exception as e:
-            error_msg = f"Error in math operation: {str(e)}"
-            logger.error(error_msg)
-            self.output.append(error_msg)
+            self.output.append(f"Error in math operation: {str(e)}")
+            logger.error(f"Error in math_operation: {str(e)}")
 
     def string_operation(self, var_name: str, operation: str):
-        """Handle string operations like converting to uppercase or lowercase"""
+        """Handle string operations"""
         try:
             if var_name not in self.variables:
                 self.output.append(f"Variable '{var_name}' not found")
@@ -356,7 +307,7 @@ class AdvancedInterpreter:
             logger.error(f"Error in string_operation: {str(e)}")
 
     def string_join(self, var_name: str, text: str):
-        """Handle joining a string with another string"""
+        """Handle joining strings"""
         try:
             if var_name not in self.variables:
                 self.output.append(f"Variable '{var_name}' not found")
@@ -367,7 +318,6 @@ class AdvancedInterpreter:
                 self.output.append(f"Cannot join non-string value: {var_name}")
                 return
 
-            # Remove surrounding quotes if present
             text = text.strip('"\'')
             result = value + text
             self.variables[var_name] = result
@@ -378,33 +328,26 @@ class AdvancedInterpreter:
             logger.error(f"Error in string_join: {str(e)}")
 
     def list_operation(self, operation: str, value: Any, var_name: str):
-        """Handle list operations like add, remove, sort"""
+        """Handle list operations"""
         try:
             if var_name not in self.variables:
-                self.output.append(f"List '{var_name}' not found")
+                self.output.append(f"Variable '{var_name}' not found")
                 return
 
             lst = self.variables[var_name]
             if not isinstance(lst, list):
-                self.output.append(f"'{var_name}' is not a list")
+                self.output.append(f"Cannot perform list operation on non-list value: {var_name}")
                 return
 
             if operation == 'add':
-                # Handle quoted strings by removing quotes
-                if isinstance(value, str):
-                    if value.startswith(("'", '"')) and value.endswith(("'", '"')):
-                        element = value[1:-1]  # Remove quotes
-                    else:
-                        try:
-                            element = int(value)
-                        except ValueError:
-                            try:
-                                element = float(value)
-                            except ValueError:
-                                element = value
-                else:
-                    element = value
-
+                try:
+                    element = int(value)
+                except ValueError:
+                    try:
+                        element = float(value)
+                    except ValueError:
+                        element = value.strip('"\'')
+                
                 lst.append(element)
                 self.variables[var_name] = lst
                 self.output.append(f"Updated {var_name} to {lst}")
@@ -480,7 +423,7 @@ class AdvancedInterpreter:
             # Format the string
             try:
                 formatted = template.format(value)
-                self.output.append(f'"{formatted}"')
+                self.output.append(formatted)
             except KeyError:
                 self.output.append(f"Invalid format string: {template}")
             except IndexError:
@@ -490,34 +433,43 @@ class AdvancedInterpreter:
             self.output.append(f"Error formatting string: {str(e)}")
             logger.error(f"Error in string_format: {str(e)}")
 
-    def _clean_variable_name(self, name: str) -> str:
-        """Clean and validate variable name"""
-        clean_name = name.strip().replace(' ', '_')
-        if not clean_name.isidentifier():
-            raise ValueError(f"Invalid variable name: {name}")
-        return clean_name
-
-    def is_number(self, s: str) -> bool:
-        """Check if a string represents a number"""
+    def evaluate_condition(self, condition: str) -> bool:
+        """Evaluate a condition translated to Python syntax"""
         try:
-            float(s)
-            return True
-        except ValueError:
+            # Translate natural language condition to Python condition
+            condition = self.translate_condition(condition)
+            logger.info(f"Evaluating condition: {condition}")
+            return eval(condition, {"__builtins__": self.safe_builtins}, self.variables)
+        except Exception as e:
+            self.output.append(f"Error evaluating condition: {str(e)}")
+            logger.error(f"Error in evaluate_condition method: {str(e)}")
             return False
 
-    def _determine_math_operation(self, line: str) -> str:
-        """Helper method to determine the math operation from the command"""
-        if re.search(r'Add|Plus|Increase', line, re.IGNORECASE):
-            return 'add'
-        elif re.search(r'Subtract|Minus|Decrease', line, re.IGNORECASE):
-            return 'subtract'
-        elif re.search(r'Multiply', line, re.IGNORECASE):
-            return 'multiply'
-        elif re.search(r'Divide', line, re.IGNORECASE):
-            return 'divide'
-        return 'unknown'
+    def translate_condition(self, condition: str) -> str:
+        """Translate natural language conditions to Python syntax"""
+        translations = {
+            'is bigger than': '>',
+            'is greater than': '>',
+            'is less than': '<',
+            'equals': '==',
+            'is equal to': '==',
+            'is not equal to': '!=',
+            'is greater than or equal to': '>=',
+            'is less than or equal to': '<=',
+            'and': 'and',
+            'or': 'or',
+            'not': 'not',
+            'contains': 'in',
+            'is in': 'in',
+            'is': '=='
+        }
 
-    def handle_conditional(self, var_name: str, operator: str, value: str):
+        for phrase, symbol in translations.items():
+            condition = condition.replace(phrase, symbol)
+        logger.info(f"Translated condition to Python syntax: {condition}")
+        return condition
+
+    def handle_conditional(self, var_name: str, operator: str, value: str) -> bool:
         """Handle conditional statements"""
         try:
             if var_name not in self.variables:
@@ -532,18 +484,14 @@ class AdvancedInterpreter:
                 return False
             
             if operator == 'bigger than':
-                result = var_value > value
+                return var_value > value
             elif operator == 'less than':
-                result = var_value < value
+                return var_value < value
             elif operator == 'equal to':
-                result = var_value == value
+                return var_value == value
             else:
                 self.output.append(f"Unknown comparison operator: {operator}")
                 return False
-                
-            if result:
-                self.output.append("High score!")  # For the specific test case
-            return result
                 
         except Exception as e:
             self.output.append(f"Error in conditional: {str(e)}")
