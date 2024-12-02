@@ -36,18 +36,18 @@ class AdvancedInterpreter:
                 r'(?:Print|Show|Display|Output|Tell me|What is|Say)(?: the| a| an)? (?:value of )?(?:variable )?([^,]+)',
             ],
             'math_ops': [
-                r'(?:Add|Plus|Increase) (.*?) (?:to|into) (\w+)',
-                r'(?:Multiply) (\w+) by (.*)',
-                r'(?:Divide) (\w+) by (.*)',
+                r'(?:Add|Plus|Increase) (\d+(?:\.\d+)?|\w+) (?:to|into) (\w+)',
+                r'(?:Multiply) (\w+) by (\d+(?:\.\d+)?|\w+)',
+                r'(?:Divide) (\w+) by (\d+(?:\.\d+)?|\w+)',
                 r'(?:Double) (\w+)',
             ],
             'string_ops': [
                 r'Convert (\w+) to (uppercase|lowercase)',
-                r'Join (\w+) with ["\'](.+)["\']',
+                r'Join (\w+) with (?:["\'])(.+?)(?:["\'])',
             ],
             'list_ops': [
-                r'(?:Add|Append) (\d+) to (\w+)',
-                r'(?:Remove) (\d+) from (\w+)',
+                r'(?:Add|Append) (\d+|\w+|(?:["\']).*?(?:["\'])) to (\w+)',
+                r'(?:Remove) (\d+|\w+|(?:["\']).*?(?:["\'])) from (\w+)',
                 r'Sort (\w+)',
             ],
             'math_funcs': [
@@ -56,7 +56,7 @@ class AdvancedInterpreter:
                 r'Generate(?: a)? random number between (\d+)(?:,| and )(\d+)',
             ],
             'string_format': [
-                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
+                r'Format string (?:["\'])(.+?)(?:["\']) with (?:["\'])(.+?)(?:["\'])',
             ],
             'conditional': [
                 r'If (.*?) is (bigger than|less than|equal to) (\d+):',
@@ -99,38 +99,36 @@ class AdvancedInterpreter:
                             return self.create_variable(name, value)
                         elif category == 'print':
                             var_name = match.group(1)
-                            return self.print_variable(var_name)
+                            return self.print_value(var_name)
                         elif category == 'math_ops':
                             if 'Double' in pattern:
                                 var_name = match.group(1)
                                 return self.math_operation('double', None, var_name)
                             else:
                                 amount, var_name = match.groups()
-                                operation = self._determine_math_operation(pattern)
+                                operation = self._determine_math_operation(line)
                                 return self.math_operation(operation, amount, var_name)
                         elif category == 'string_ops':
-                            if 'uppercase' in pattern or 'lowercase' in pattern:
-                                var_name, operation = match.groups()
-                                return self.string_operation(var_name, operation)
-                            else:
-                                var_name, text = match.groups()
-                                return self.string_join(var_name, text)
+                            var_name, operation = match.groups()
+                            return self.string_operation(var_name, operation)
                         elif category == 'list_ops':
                             if 'Sort' in pattern:
                                 var_name = match.group(1)
                                 return self.list_operation('sort', None, var_name)
                             else:
                                 value, var_name = match.groups()
-                                operation = 'add' if 'Add' in pattern else 'remove'
+                                operation = 'add' if 'Add' in line else 'remove'
                                 return self.list_operation(operation, value, var_name)
                         elif category == 'math_funcs':
                             if 'random' in pattern:
                                 start, end = match.groups()
                                 return self.math_function('random', f"{start},{end}")
+                            elif 'square root' in pattern:
+                                value = match.group(1)
+                                return self.math_function('sqrt', value)
                             else:
                                 value = match.group(1)
-                                func = 'sqrt' if 'square root' in pattern else 'max'
-                                return self.math_function(func, value)
+                                return self.math_function('max', value)
                         elif category == 'string_format':
                             template, value = match.groups()
                             return self.string_format(template, value)
@@ -372,7 +370,6 @@ class AdvancedInterpreter:
             logger.info(f"Performed '{operation}' on '{var_name}': {value} -> {result}")
 
         except Exception as e:
-            # Log and append any errors encountered during string operations
             self.output.append(f"Error in string operation: {str(e)}")
             logger.error(f"Error in string_operation: {str(e)}")
 
@@ -421,10 +418,17 @@ class AdvancedInterpreter:
                 return
 
             if operation == 'add' or operation == 'append':
-                try:
-                    element = int(value)
-                except ValueError:
-                    element = value.strip('"\'')
+                # Handle quoted strings by removing quotes
+                if isinstance(value, str) and value.startswith(("'", '"')) and value.endswith(("'", '"')):
+                    element = value[1:-1]  # Remove quotes
+                else:
+                    try:
+                        element = int(value)
+                    except ValueError:
+                        try:
+                            element = float(value)
+                        except ValueError:
+                            element = value
                 lst.append(element)
                 self.output.append(f"Added {element} to {var_name}: {lst}")
                 logger.info(f"Added {element} to list '{var_name}': {lst}")
@@ -520,5 +524,39 @@ class AdvancedInterpreter:
             float(s)
             return True
         except ValueError:
+            return False
+
+    def _determine_math_operation(self, line: str) -> str:
+        """Helper method to determine the math operation from the command"""
+        if re.search(r'Add|Plus|Increase', line, re.IGNORECASE):
+            return 'add'
+        elif re.search(r'Subtract|Minus|Decrease', line, re.IGNORECASE):
+            return 'subtract'
+        elif re.search(r'Multiply', line, re.IGNORECASE):
+            return 'multiply'
+        elif re.search(r'Divide', line, re.IGNORECASE):
+            return 'divide'
+        return 'unknown'
+
+    def handle_conditional(self, var_name: str, operator: str, value: str):
+        """Handle conditional statements"""
+        try:
+            if var_name not in self.variables:
+                self.output.append(f"I can't find a variable called {var_name}")
+                return False
+            
+            var_value = self.variables[var_name]
+            value = float(value)
+            
+            if operator == 'bigger than':
+                return var_value > value
+            elif operator == 'less than':
+                return var_value < value
+            elif operator == 'equal to':
+                return var_value == value
+                
+        except Exception as e:
+            self.output.append(f"Error in conditional: {str(e)}")
+            logger.error(f"Error in handle_conditional: {str(e)}")
             return False
  
