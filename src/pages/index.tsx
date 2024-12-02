@@ -5,15 +5,40 @@ import { python } from '@codemirror/lang-python'
 import { basicSetup } from 'codemirror'
 
 export default function NaturalPythonIDE() {
-  const [code, setCode] = useState(`# Welcome to Natural Python!
-# Try these examples:
+  const [code, setCode] = useState(`# Natural Python Test Examples
 
+# 1. Variable Creation and Math
 Make a number called score equal to 10
 Add 5 to score
 Print score
+Multiply score by 2
+Divide score by 3
 
+# 2. String Operations
+Create a string called greeting with "Hello World"
+Convert greeting to uppercase
+Join greeting with "!"
+Print greeting
+
+# 3. List Operations
+Make a list numbers equal to [1, 2, 3, 4, 5]
+Add 6 to numbers
+Remove 3 from numbers
+Sort numbers
+Print numbers
+
+# 4. Conditional Logic
 If score is bigger than 12:
-    Print "High score!"`)
+    Print "High score!"
+    Double score
+    Print "New score is:"
+    Print score
+
+# 5. Advanced Operations
+Calculate square root of 16
+Find maximum of numbers
+Generate random number between 1 and 10
+Format string "Hello {}" with "Alice"`)
   const [output, setOutput] = useState('')
   const [isRunning, setIsRunning] = useState(false)
 
