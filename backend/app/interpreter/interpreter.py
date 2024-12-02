@@ -51,15 +51,15 @@ class AdvancedInterpreter:
                 r'(?:Double) (\w+)',
                 r'(?:Half) (\w+)',
             ],
-            'string_format': [
-                # Patterns for string formatting
-                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
-            ],
             'math_funcs': [
                 # Patterns for advanced math functions
                 r'(?:Calculate|Compute|Find) (?:the )?(?:square root|sqrt) of (\d+)',
                 r'(?:Find|Get|Calculate) (?:the )?(?:maximum|min) of (\w+)',
                 r'(?:Generate|Create) (?:a )?random number between (\d+) and (\d+)',
+            ],
+            'string_format': [
+                # Patterns for string formatting
+                r'Format string ["\'](.+)["\'] with ["\'](.+)["\']',
             ],
             'string_ops': [
                 # Patterns for string operations
@@ -345,7 +345,6 @@ class AdvancedInterpreter:
             else:
                 amount_val = float(amount)
 
-            original = self.variables[var_name]
             result = None
 
             if operation == 'add':
@@ -535,7 +534,7 @@ class AdvancedInterpreter:
         except Exception as e:
             # Log and append any errors encountered during string formatting
             self.output.append(f"Error formatting string: {str(e)}")
-            logger.error(f"Error in string_format method: {str(e)}")
+            logger.error(f"Error in format_string method: {str(e)}")
 
     def _clean_variable_name(self, name: str) -> str:
         """Clean and validate variable name"""
@@ -551,3 +550,4 @@ class AdvancedInterpreter:
             return True
         except ValueError:
             return False
+ 
