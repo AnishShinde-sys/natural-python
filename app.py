@@ -53,6 +53,10 @@ class AdvancedInterpreter:
                 # Division with natural language
                 r'(?:Divide|Split|Share)(?: the| a| an)? (\w+) (?:by|into|in) (.*)',
                 r'(?:Half|Quarter)(?: the| a| an)? (\w+)',
+                # More natural math operations
+                r'(?:What is|Calculate|Find) (.*?) (?:plus|minus|times|divided by) (.*)',
+                r'(?:Increase|Decrease) (.*?) by (.*?) percent',
+                r'(?:Take|Find)(?: the)? (.*?) percent of (.*)',
             ],
             'list_ops': [
                 # List operations with natural language
@@ -134,6 +138,17 @@ class AdvancedInterpreter:
                 r'(?:Calculate|Compute|Find)(?: the)? (sin|cos|tan|log|exp) of (.*)',
                 r'(?:Round|Floor|Ceil) (?:the )?(?:number )?(.*)',
                 r'(?:Get|Find|Calculate)(?: the)? (absolute|factorial|power) of (.*)',
+            ],
+            'input': [
+                # Basic input with natural language
+                r'(?:Ask|Get|Request|Input)(?: for)?(?: the| a| an)? (.*?)(?:from the user| from user)?',
+                r'(?:Get|Request|Input)(?: the| a| an)? (.*?) (?:from|by) (?:the )?user',
+                r'(?:Let|Have)(?: the)? user (?:input|enter|type|give|provide)(?: a| an)? (.*)',
+            ],
+            'string_format': [
+                r'(?:Format|Make)(?: the)? string (.*?) (?:with|using) (.*)',
+                r'(?:Replace|Substitute) (.*?) (?:with|by|for) (.*?) in (.*)',
+                r'(?:Put|Insert) (.*?) (?:into|in) (?:the )?(?:string|text) (.*)',
             ],
         }
 
@@ -218,6 +233,16 @@ class AdvancedInterpreter:
                             operation = self._determine_math_operation(pattern)
                             if operation:
                                 return self.math_operation(operation, amount, var_name)
+
+            # Add handling for input patterns
+            if match := re.match(self.command_patterns['input'][0], line, re.IGNORECASE):
+                prompt = match.group(1)
+                return self.get_user_input(prompt)
+                
+            # Add handling for string formatting
+            if match := re.match(self.command_patterns['string_format'][0], line, re.IGNORECASE):
+                template, values = match.groups()
+                return self.format_string(template, values)
 
             # If no pattern matched, try to understand as a natural expression
             self.output.append(f"I don't understand: {line}")
@@ -503,6 +528,99 @@ class AdvancedInterpreter:
         except Exception as e:
             self.output.append(f"Error creating class: {str(e)}")
 
+    def get_user_input(self, prompt: str) -> str:
+        """Handle user input with improved natural language support"""
+        try:
+            # Clean and format the prompt
+            clean_prompt = prompt.strip()
+            # Remove common words that don't add meaning
+            for word in ['the', 'a', 'an', 'some', 'for']:
+                clean_prompt = re.sub(rf'\b{word}\b', '', clean_prompt)
+            clean_prompt = ' '.join(clean_prompt.split())
+            
+            # Format the prompt nicely
+            formatted_prompt = f"Enter {clean_prompt}: "
+            
+            # In a web context, we need to handle this differently
+            # Store the fact that we're waiting for input
+            self.variables['_waiting_for_input'] = True
+            self.variables['_input_prompt'] = formatted_prompt
+            
+            # For web interface, return a special message
+            self.output.append(f"Waiting for input: {formatted_prompt}")
+            return '_waiting_for_input'
+
+        except Exception as e:
+            self.output.append(f"Error getting input: {str(e)}")
+            return None
+
+    def process_input(self, user_input: str):
+        """Process user input and store it in variables"""
+        try:
+            if '_waiting_for_input' in self.variables and self.variables['_waiting_for_input']:
+                # Try to evaluate the input if it looks like a number or expression
+                try:
+                    if user_input.replace('.', '').isdigit():
+                        value = float(user_input)
+                    elif all(c in '0123456789+-*/.()' for c in user_input):
+                        value = eval(user_input, {"__builtins__": self.safe_builtins}, {})
+                    else:
+                        value = user_input
+                    
+                    # Store the input in a variable if specified
+                    if '_input_variable' in self.variables:
+                        var_name = self.variables['_input_variable']
+                        self.variables[var_name] = value
+                        self.output.append(f"Stored input in {var_name}: {value}")
+                    
+                    # Clean up input state
+                    del self.variables['_waiting_for_input']
+                    if '_input_prompt' in self.variables:
+                        del self.variables['_input_prompt']
+                    if '_input_variable' in self.variables:
+                        del self.variables['_input_variable']
+                    
+                    return value
+                
+                except Exception as e:
+                    self.output.append(f"Error processing input: {str(e)}")
+                    return None
+            else:
+                self.output.append("No input was requested")
+                return None
+            
+        except Exception as e:
+            self.output.append(f"Error processing input: {str(e)}")
+            return None
+
+    def format_string(self, template: str, values: str, target: str = None):
+        """Handle string formatting with natural language support"""
+        try:
+            # Handle different formatting styles
+            if '{' in template and '}' in template:
+                # Python format-style string
+                if isinstance(values, dict):
+                    result = template.format(**values)
+                elif isinstance(values, (list, tuple)):
+                    result = template.format(*values)
+                else:
+                    result = template.format(values)
+            else:
+                # Simple replacement
+                if target:
+                    result = template.replace(target, str(values))
+                else:
+                    result = template % values if '%' in template else template + str(values)
+            
+            if target:
+                self.variables[target] = result
+                self.output.append(f"Updated {target} = {result}")
+            else:
+                self.output.append(result)
+
+        except Exception as e:
+            self.output.append(f"Error formatting string: {str(e)}")
+
 # Create Flask app
 app = Flask(__name__)
 interpreter = AdvancedInterpreter()
@@ -522,6 +640,22 @@ def run_code():
         return jsonify({'output': output})
     except Exception as e:
         logger.error(f"Error running code: {str(e)}")
+        return jsonify({'error': f"Error: {str(e)}"}), 500
+
+@app.route('/input', methods=['POST'])
+def handle_input():
+    try:
+        user_input = request.json.get('input', '')
+        if not user_input.strip():
+            return jsonify({'error': 'No input provided'})
+            
+        result = interpreter.process_input(user_input)
+        return jsonify({
+            'output': interpreter.output,
+            'result': result
+        })
+    except Exception as e:
+        logger.error(f"Error handling input: {str(e)}")
         return jsonify({'error': f"Error: {str(e)}"}), 500
 
 if __name__ == '__main__':
