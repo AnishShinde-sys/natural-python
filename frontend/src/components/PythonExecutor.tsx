@@ -14,6 +14,8 @@ export default function PythonExecutor({ code, onResult }: PythonExecutorProps) 
   const executePython = async (code: string) => {
     try {
       setLoading(true);
+      console.log('Executing code:', code);
+      
       const response = await fetch(`${API_URL}/api/execute`, {
         method: 'POST',
         headers: {
@@ -23,6 +25,7 @@ export default function PythonExecutor({ code, onResult }: PythonExecutorProps) 
       });
 
       const data = await response.json();
+      console.log('Response:', data);
       
       if (!response.ok) {
         throw new Error(data.detail || 'Failed to execute code');
@@ -30,6 +33,7 @@ export default function PythonExecutor({ code, onResult }: PythonExecutorProps) 
 
       onResult(data.output);
     } catch (err) {
+      console.error('Error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       onResult('Error executing code');
     } finally {
