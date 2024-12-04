@@ -15,7 +15,8 @@
     "codemirror": "^6.0.1",
     "next": "13.4.7",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "pyodide": "^0.24.1"
   },
   "devDependencies": {
     "@types/node": "20.3.1",

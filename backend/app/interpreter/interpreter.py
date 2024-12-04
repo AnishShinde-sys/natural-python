@@ -4,6 +4,7 @@ import random
 from typing import Dict, Any, List
 import logging
 import traceback
+from .code_executor import CodeExecutor
 
 # Configure logging
 logging.basicConfig(
@@ -20,6 +21,7 @@ class AdvancedInterpreter:
     def __init__(self):
         self.variables: Dict[str, Any] = {}
         self.output: List[str] = []
+        self.code_executor = CodeExecutor()
         
         # Initialize safe built-in functions
         self.safe_builtins = {
@@ -497,4 +499,26 @@ class AdvancedInterpreter:
             self.output.append(f"Error in conditional: {str(e)}")
             logger.error(f"Error in handle_conditional: {str(e)}")
             return False
+
+    def execute_python_code(self, code: str) -> str:
+        """Execute raw Python code with safety checks"""
+        try:
+            # Basic security check for dangerous operations
+            dangerous_terms = ['import os', 'import sys', 'import subprocess', 
+                             'eval(', 'exec(', '__import__']
+            if any(term in code for term in dangerous_terms):
+                return "Error: Potentially unsafe code detected"
+
+            # Execute the code
+            stdout, stderr, return_code = self.code_executor.execute_code(code)
+            
+            if return_code != 0:
+                return f"Error executing code:\n{stderr}"
+            
+            return stdout if stdout else "Code executed successfully"
+
+        except Exception as e:
+            error_msg = f"Error executing code: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
  

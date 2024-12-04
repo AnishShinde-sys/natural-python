@@ -3,14 +3,15 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
-      - "5001:5000"
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
     environment:
-      - FLASK_ENV=development
-    networks:
-      - app-network
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
 
   frontend:
     build:
@@ -18,12 +19,13 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
-    networks:
-      - app-network
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
 
 networks:
   app-network:
