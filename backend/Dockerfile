@@ -17,11 +17,12 @@ RUN apt-get update && apt-get install -y \
 # Copy CPython source code
 COPY cpython-main\ 2/ /cpython/
 
-# Build Python
+# Build Python with shared libraries enabled
 WORKDIR /cpython
-RUN ./configure --enable-optimizations && \
+RUN ./configure --enable-optimizations --enable-shared && \
     make -j$(nproc) && \
-    make install
+    make install && \
+    ldconfig
 
 # Stage 2: Runtime environment
 FROM debian:bullseye-slim
@@ -33,14 +34,24 @@ COPY --from=python-builder /usr/local /usr/local
 RUN apt-get update && apt-get install -y \
     libssl-dev \
     libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    ldconfig
 
 # Set up the backend application
 WORKDIR /app
-COPY . /app/
 
-# Install Python dependencies
-RUN pip install -r requirements.txt
+# Copy requirements first for better caching
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
+COPY backend/ .
+
+# Create a non-root user
+RUN useradd -m -U appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 # Expose the port
 EXPOSE 8000

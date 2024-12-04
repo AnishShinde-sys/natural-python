@@ -6,16 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Add after creating the FastAPI app
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Add your frontend URL
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Path to your custom Python interpreter
+# Path to custom Python interpreter
 PYTHON_PATH = os.path.join(os.path.dirname(__file__), "../../../cpython-main 2/python")
 
 class CodeRequest(BaseModel):
@@ -27,29 +27,37 @@ class CodeResponse(BaseModel):
 @app.post("/api/execute")
 async def execute_code(request: CodeRequest) -> CodeResponse:
     try:
-        # Create a temporary file to store the code
-        with open("temp.py", "w") as f:
+        # Create a temporary file with the Python code
+        temp_file = "temp.py"
+        with open(temp_file, "w") as f:
             f.write(request.code)
 
-        # Execute the code using the custom Python interpreter
-        result = subprocess.run(
-            [PYTHON_PATH, "temp.py"],
-            capture_output=True,
-            text=True,
-            timeout=30  # 30 second timeout
-        )
+        try:
+            # Execute the code using the custom Python interpreter
+            result = subprocess.run(
+                [PYTHON_PATH, temp_file],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
 
-        # Clean up the temporary file
-        os.remove("temp.py")
+            # Combine stdout and stderr for output
+            output = result.stdout
+            if result.stderr:
+                output += f"\nErrors:\n{result.stderr}"
 
-        # Return both stdout and stderr
-        output = result.stdout
-        if result.stderr:
-            output += "\nErrors:\n" + result.stderr
+            return CodeResponse(output=output)
 
-        return CodeResponse(output=output)
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Code execution timed out")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"} 
