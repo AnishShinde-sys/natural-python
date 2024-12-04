@@ -15,4 +15,26 @@ body {
     rgb(var(--background-start-rgb)),
     rgb(var(--background-end-rgb))
   );
+}
+
+/* CodeMirror editor styles */
+.cm-editor {
+  height: 400px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cm-editor .cm-content {
+  white-space: pre-wrap;
+}
+
+/* Output area styles */
+pre {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 } 
