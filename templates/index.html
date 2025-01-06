@@ -13,44 +13,22 @@
   <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
   <meta name="theme-color" content="#3776AB"/>
 
-  <!-- 
-    GOOGLE TAG MANAGER (HEAD) 
-    This snippet loads GTM before anything else so it can capture any events triggered early on.
-    Replace 'GTM-NCNQTSR8' with your actual container ID.
-  -->
-  <script>
-    (function(w, d, s, l, i){
-      w[l] = w[l] || [];
-      w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
-      var f = d.getElementsByTagName(s)[0],
-          j = d.createElement(s),
-          dl = (l !== 'dataLayer') ? '&l=' + l : '';
-      j.async = true;
-      j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-      f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-NCNQTSR8');
-  </script>
-  <!-- End Google Tag Manager (head) -->
-
-  <!-- 
-    GA4 GLOBAL SITE TAG (gtag.js) 
-    Replace 'G-S2FTMGXZR6' with your measurement ID from GA4.
-  -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-S2FTMGXZR6"></script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4PNKL38K2F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
-    // GA4 config
-    gtag('config', 'G-S2FTMGXZR6');
+
+    gtag('config', 'G-4PNKL38K2F');
   </script>
 
   <!-- CodeMirror CSS -->
-  <link 
+  <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css"
   />
-  <link 
+  <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css"
   />
@@ -160,23 +138,13 @@
 </head>
 
 <body class="theme-dark">
-  <!-- Google Tag Manager (noscript) -->
-  <noscript>
-    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NCNQTSR8"
-            height="0" width="0"
-            style="display:none;visibility:hidden">
-    </iframe>
-  </noscript>
-  <!-- End Google Tag Manager (noscript) -->
-
   <div class="ide-container">
     <!-- Top Navigation -->
     <nav class="top-nav">
       <div class="nav-left">
         <button class="icon-btn" id="menuToggle" title="Toggle Sidebar">
           <svg width="16" height="16" viewBox="0 0 16 16">
-            <path d="M2 4h12M2 8h12M2 12h12"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
         <div class="breadcrumb">
@@ -184,9 +152,8 @@
         </div>
         <button class="guide-btn" onclick="showGuide()">
           <svg width="16" height="16" viewBox="0 0 16 16">
-            <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14A6 6 0 118 2a6 6 0 010 12zm0-9a1 1 0 100 2
-                     1 1 0 000-2zm0 3a1 1 0 00-1 1v3a1 1 0 102 0V9a1 1 0 00-1-1z"
-                  fill="currentColor"/>
+            <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14A6 6 0 118 2a6 6 0 010 12zm0-9a1 1 0 100 2 1 1 0 000-2zm0 3a1 1 0 00-1 1v3a1 1 0 102 0V9a1 1 0 00-1-1z"
+                fill="currentColor"/>
           </svg>
           Guide
         </button>
@@ -202,7 +169,7 @@
       <div class="nav-right">
         <button class="icon-btn" id="clearOutput" title="Clear Output">
           <svg width="16" height="16" viewBox="0 0 16 16">
-            <path d="M2 4h12M6 4v10M10 4v10M2 4v10h12V4"
+            <path d="M2 4h12M6 4v10M10 4v10M2 4v10h12V4" 
                   stroke="currentColor" stroke-width="1.5" fill="none"/>
           </svg>
         </button>
