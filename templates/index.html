@@ -13,6 +13,21 @@
     <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
     <meta name="theme-color" content="#3776AB">
 
+    <!-- Google Tag Manager (head) -->
+    <script>
+      (function(w,d,s,l,i){
+        w[l] = w[l] || [];
+        w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
+        var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l!='dataLayer' ? '&l='+l : '';
+        j.async = true;
+        j.src = 'https://www.googletagmanager.com/gtm.js?id='+i+dl;
+        f.parentNode.insertBefore(j,f);
+      })(window, document, 'script', 'dataLayer', 'GTM-NCNQTSR8');
+    </script>
+    <!-- End Google Tag Manager (head) -->
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-YRY0RS2PSL"></script>
     <script>
@@ -22,125 +37,140 @@
       gtag('config', 'G-YRY0RS2PSL');
     </script>
 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css" rel="stylesheet">
+    <!-- CodeMirror CSS -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css"
+      rel="stylesheet"
+    />
+    <!-- Your custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
     <style>
-        /* Guide Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            z-index: 1000;
-            overflow-y: auto;
-            padding: 20px;
-        }
+      /* Guide Modal Styles */
+      .modal {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.75);
+          z-index: 1000;
+          overflow-y: auto;
+          padding: 20px;
+      }
 
-        .modal-content {
-            position: relative;
-            background: var(--bg-primary);
-            margin: 20px auto;
-            padding: 30px;
-            width: 90%;
-            max-width: 1000px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border);
-        }
+      .modal-content {
+          position: relative;
+          background: var(--bg-primary);
+          margin: 20px auto;
+          padding: 30px;
+          width: 90%;
+          max-width: 1000px;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+          border: 1px solid var(--border);
+      }
 
-        .guide-section {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-        }
+      .guide-section {
+          background: var(--bg-secondary);
+          border-radius: 8px;
+          padding: 20px;
+          margin-bottom: 20px;
+          border: 1px solid var(--border);
+      }
 
-        .guide-section h3 {
-            color: var(--accent);
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+      .guide-section h3 {
+          color: var(--accent);
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+      }
 
-        .code-example {
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            padding: 16px;
-            margin: 12px 0;
-            font-family: 'Fira Code', 'Consolas', monospace;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            overflow-x: auto;
-            border: 1px solid var(--border);
-        }
+      .code-example {
+          background: var(--bg-tertiary);
+          border-radius: 6px;
+          padding: 16px;
+          margin: 12px 0;
+          font-family: 'Fira Code', 'Consolas', monospace;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          overflow-x: auto;
+          border: 1px solid var(--border);
+      }
 
-        .close-btn {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            width: 32px;
-            height: 32px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+      .close-btn {
+          position: absolute;
+          right: 20px;
+          top: 20px;
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border);
+          color: var(--text-primary);
+          width: 32px;
+          height: 32px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+      }
 
-        .close-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
+      .close-btn:hover {
+          background: var(--accent);
+          color: white;
+      }
 
-        .guide-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
-        }
+      .guide-title {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin-bottom: 1.5rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid var(--border);
+      }
 
-        .guide-description {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-            line-height: 1.6;
-        }
+      .guide-description {
+          color: var(--text-secondary);
+          margin-bottom: 2rem;
+          line-height: 1.6;
+      }
 
-        /* Update the guide button style */
-        .guide-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--accent);
-            border: none;
-            border-radius: 6px;
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+      /* Guide button style */
+      .guide-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          background: var(--accent);
+          border: none;
+          border-radius: 6px;
+          color: white;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+      }
 
-        .guide-btn:hover {
-            background: var(--success);
-            transform: translateY(-1px);
-        }
+      .guide-btn:hover {
+          background: var(--success);
+          transform: translateY(-1px);
+      }
     </style>
 </head>
+
 <body class="theme-dark">
+    <!-- Google Tag Manager (noscript body) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NCNQTSR8"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript body) -->
+
     <div class="ide-container">
         <!-- Top Navigation -->
         <nav class="top-nav">
@@ -155,7 +185,10 @@
                 </div>
                 <button class="guide-btn" onclick="showGuide()">
                     <svg width="16" height="16" viewBox="0 0 16 16">
-                        <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14A6 6 0 118 2a6 6 0 010 12zm0-9a1 1 0 100 2 1 1 0 000-2zm0 3a1 1 0 00-1 1v3a1 1 0 102 0V9a1 1 0 00-1-1z" fill="currentColor"/>
+                        <path
+                          d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14A6 6 0 118 2a6 6 0 010 12zm0-9a1 1 0 100 2 1 1 0 000-2zm0 3a1 1 0 00-1 1v3a1 1 0 102 0V9a1 1 0 00-1-1z"
+                          fill="currentColor"
+                        />
                     </svg>
                     Guide
                 </button>
@@ -298,7 +331,8 @@ Add 5 to score
 Print score
 
 If score is bigger than 12:
-    Print "High score!"</textarea>
+    Print "High score!"
+                        </textarea>
                     </div>
                 </div>
 
@@ -331,24 +365,20 @@ If score is bigger than 12:
         </div>
     </div>
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YRY0RS2PSL"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-YRY0RS2PSL');
+    <!-- CodeMirror JS -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js">
     </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js">
+    </script>
+    <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
     <script>
-        // Add these functions to your existing script.js
         function showGuide() {
             document.getElementById('guideModal').style.display = 'block';
         }
-
         function hideGuide() {
             document.getElementById('guideModal').style.display = 'none';
         }
